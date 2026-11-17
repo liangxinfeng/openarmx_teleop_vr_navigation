@@ -1,6 +1,6 @@
 /* Lightweight VR navigation surface layered on the proven teleop client. */
 
-const NAVIGATION_ASSET_VERSION = 'yundie-300-template-start-v2026101401';
+const NAVIGATION_ASSET_VERSION = 'yundie-306-navigation-v2026111102';
 
 const navUi = {
   enabled: false,
@@ -64,8 +64,8 @@ const navUi = {
   pollTimer: null,
   pollPending: false,
   actionPending: false,
-  gripperWidthCm: 0.0,
-  gripperWidthBusy: false,
+  gripperClosedPercent: 90.0,
+  gripperPositionBusy: false,
   forceAdjustLatch: false,
   bodyHeightEngaged: false,
   quickResetHeightSuppressed: false,
@@ -91,9 +91,6 @@ const navUi = {
   manualRelocalizationMoveSpeed: 1.80,
   relocalizationAlertKey: '',
   taskVersion: -1,
-  taskDecisionKey: '',
-  taskAcceptArmed: false,
-  taskAcceptPending: false,
   taskHoldStartedAt: 0,
   taskHoldMode: '',
   taskHoldToken: '',
@@ -510,10 +507,12 @@ function sendBaseDrive(
   lateral = 0,
   turn = 0,
   bodyHeightEnabled = false,
-  bodyHeightDirection = 0
+  bodyHeightDirection = 0,
+  pauseForMenu = false
 ) {
   const payload = {
     deadman: Boolean(deadman),
+    pause_for_menu: Boolean(deadman && pauseForMenu),
     forward,
     lateral,
     turn,
@@ -535,31 +534,31 @@ function sendBaseDrive(
   socket.send(JSON.stringify({ type: 'base_drive', timestamp: Date.now(), ...payload }));
 }
 
-async function sendGripperWidth(widthCm) {
-  if (navUi.gripperWidthBusy) return;
-  navUi.gripperWidthBusy = true;
+async function sendGripperPosition(closedPercent) {
+  if (navUi.gripperPositionBusy) return;
+  navUi.gripperPositionBusy = true;
   try {
-    const response = await fetch('/api/gripper/width', {
+    const response = await fetch('/api/gripper/position', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ width_cm: widthCm }),
+      body: JSON.stringify({ closed_percent: closedPercent }),
       signal: AbortSignal.timeout(5000)
     });
     const result = await response.json();
     if (!response.ok || !result.success) throw new Error(result.message || `HTTP ${response.status}`);
-    navUi.gripperWidthCm = Number(result.width_cm);
-    navShowNotice(`闭合宽度 ${navUi.gripperWidthCm.toFixed(1)}cm（名义值）`, 1600, '#72f0b1');
+    navUi.gripperClosedPercent = Number(result.closed_percent);
+    navShowNotice(`闭合行程 ${navUi.gripperClosedPercent.toFixed(0)}%（DM行程）`, 1600, '#72f0b1');
   } catch (error) {
-    navShowNotice(`宽度未确认，请重试：${error.message || error}`, 2200, '#ff8b8b');
+    navShowNotice(`行程未确认，请重试：${error.message || error}`, 2200, '#ff8b8b');
   } finally {
-    navUi.gripperWidthBusy = false;
+    navUi.gripperPositionBusy = false;
     drawNavigationPanel();
   }
 }
 
-function adjustGripperWidth(direction) {
-  const next = Math.max(0, Math.min(9, navUi.gripperWidthCm + Math.sign(direction) * 0.5));
-  if (next !== navUi.gripperWidthCm) void sendGripperWidth(next);
+function adjustGripperPosition(direction) {
+  const next = Math.max(0, Math.min(100, navUi.gripperClosedPercent + Math.sign(direction) * 5));
+  if (next !== navUi.gripperClosedPercent) void sendGripperPosition(next);
 }
 
 function templateConfirmTaskCount() {
@@ -667,6 +666,7 @@ function setBaseControlLatched(enabled, notify = true, resumeNavigation = false)
   const next = Boolean(enabled);
   if (next === navUi.baseControlLatched) return;
   navUi.baseControlLatched = next;
+  if (!next) squatModeUi.reset();
   if (next) {
     // Claim manual ownership immediately; the next XR frame supplies axes.
     sendBaseDrive(true);
@@ -683,7 +683,7 @@ function setBaseControlLatched(enabled, notify = true, resumeNavigation = false)
   }
   if (notify) {
     navShowNotice(
-      next ? '底盘控制已接管\nX 降低身体 · Y 升高身体' : '底盘控制已取消',
+      next ? '底盘控制已接管\nX 降低 · Y 升高；短按右摇杆选下蹲方式' : '底盘控制已取消',
       1800,
       next ? '#61f2a7' : '#ffcf70'
     );
@@ -849,6 +849,9 @@ function navigationItems() {
   }
   return [
     { kind: 'stop', label: '■ 停止当前导航' },
+    { kind: 'fisheye-toggle', label: `鱼眼小窗：${globalThis.autolifeFisheyePip?.label || '关'} · A切换` },
+    ...(['ready_to_start', 'waiting_localization'].includes(navUi.state?.task_dispatch?.state)
+      ? [{kind: 'task-retry-start', label: '定位就绪后重试启动流程'}] : []),
     ...(navUi.state?.task_dispatch?.state === 'failed'
       ? [{kind: 'task-retry-pose', label: '重试当前姿态（锁头后长按A）'}] : []),
     ...(['navigating','navigation_failed','adjusting_height','awaiting_action','failed'].includes(navUi.state?.task_dispatch?.state)
@@ -858,10 +861,12 @@ function navigationItems() {
     { kind: 'map-library', label: '▣ 切换地图与航点库' },
     { kind: 'task-templates', label: '▶ 预设多任务流程…' },
     { kind: 'custom-open', label: '＋ 自定义任务流程…' },
+    ...(globalThis.autolifeTeaching?.data.enabled ? [{kind:'teaching-open',label:'● 遥操示教 / 录制控制…'}] : []),
+    { kind: 'squat-open', label: `正 / 反向下蹲设置 · ${navUi.state?.manual_squat?.mode === 'reverse' ? '反向' : navUi.state?.manual_squat?.mode === 'normal' ? '正向' : '待同步'}…` },
     { kind: 'pose-open', label: '头部角度 / 身体高度…' },
     {
       kind: 'gripper-force',
-      label: `闭合宽度 ${navUi.gripperWidthCm.toFixed(1)}cm${navUi.gripperWidthBusy ? ' …' : '  ← →'}`
+      label: `闭合行程 ${navUi.gripperClosedPercent.toFixed(0)}%${navUi.gripperPositionBusy ? ' …' : '  ← →'}`
     },
     { kind: 'exit-vr', label: '退出VR遥操…' },
     { kind: 'save-waypoint', label: '＋ 保存当前位置为航点' },
@@ -995,7 +1000,63 @@ function createNavigationPanel() {
   navUi.ensureTexture = ensureTexture;
 }
 
+function updateNavigationVideoGeometry() {
+  const status = globalThis.autolifeVrCameraPreview?.getStatus?.() || {};
+  const width = Number(status.width);
+  const height = Number(status.height);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return false;
+  const planeWidth = 2.3;
+  const planeHeight = 1.725; // Restore the original 4:3 headset rectangle; keep source pixels unchanged.
+  for (const panel of [navUi.videoPanel, navUi.corridorPanel]) {
+    if (!panel) continue;
+    if (Number(panel.getAttribute('width')) !== planeWidth) panel.setAttribute('width', planeWidth);
+    if (Number(panel.getAttribute('height')) !== planeHeight) panel.setAttribute('height', planeHeight);
+  }
+  if (navUi.backdropPanel) {
+    const backdropWidth = Number((planeWidth + 0.06).toFixed(6));
+    const backdropHeight = Number((planeHeight + 0.06).toFixed(6));
+    if (Number(navUi.backdropPanel.getAttribute('width')) !== backdropWidth) navUi.backdropPanel.setAttribute('width', backdropWidth);
+    if (Number(navUi.backdropPanel.getAttribute('height')) !== backdropHeight) navUi.backdropPanel.setAttribute('height', backdropHeight);
+  }
+  // Normalized corridor coordinates follow the same restored 4:3 display.
+  // The full video texture and independent menu/map canvas remain unchanged.
+  const overlayHeight = 900;
+  if (navUi.corridorCanvas && navUi.corridorCanvas.height !== overlayHeight) {
+    navUi.corridorCanvas.height = overlayHeight;
+    navUi.corridorRenderKey = '';
+    drawForwardCorridorGuide();
+    if (navUi.corridorTexture) navUi.corridorTexture.needsUpdate = true;
+  }
+  return true;
+}
+
+function navigationVideoStatus() {
+  const panel = navUi.videoPanel;
+  const mesh = panel?.getObject3D('mesh');
+  const geometry = mesh?.geometry?.parameters;
+  const width = Number(geometry?.width || 0)
+    * Math.abs(Number(mesh?.scale?.x ?? 1)) * Math.abs(Number(panel?.object3D?.scale?.x ?? 1));
+  const height = Number(geometry?.height || 0)
+    * Math.abs(Number(mesh?.scale?.y ?? 1)) * Math.abs(Number(panel?.object3D?.scale?.y ?? 1));
+  const camera = globalThis.autolifeVrCameraPreview?.getStatus?.() || {};
+  return {
+    mode: navUi.cameraMode,
+    navigation_visible: Boolean(navUi.visible),
+    video_visible: Boolean(panel?.object3D?.visible),
+    geometry_ready: width > 0 && height > 0,
+    plane_width: width,
+    plane_height: height,
+    plane_aspect: height > 0 ? Number((width / height).toFixed(6)) : 0,
+    actual_width: Number(camera.width || 0),
+    actual_height: Number(camera.height || 0),
+    frame_age_ms: camera.frame_age_ms ?? null
+  };
+}
+
+globalThis.autolifeNavigationVideoStatus = navigationVideoStatus;
+
 function bindNavigationVideoTexture() {
+  updateNavigationVideoGeometry();
   const mesh = navUi.videoPanel?.getObject3D('mesh');
   const texture = globalThis.autolifeVrCameraPreview?.getTexture?.();
   if (!mesh || !texture) return false;
@@ -1673,14 +1734,16 @@ function drawForwardCorridorGuide() {
   context.clearRect(0, 0, canvas.width, canvas.height);
   const corridor = navUi.corridor;
   const fresh = performance.now() - navUi.corridorReceivedAt < 450;
-  const renderKey = `${navUi.visible ? 1 : 0}:${fresh ? 1 : 0}:${corridor?.sequence ?? -1}`;
+  const renderKey = `${navUi.visible ? 1 : 0}:${fresh ? 1 : 0}:${corridor?.sequence ?? -1}:${(globalThis.autolifeFisheyePip?.getExclusionRects(canvas.width, canvas.height) || []).length ? 1 : 0}`;
   if (renderKey === navUi.corridorRenderKey) return;
   navUi.corridorRenderKey = renderKey;
   if (!navUi.visible || !fresh) {
     if (navUi.corridorTexture) navUi.corridorTexture.needsUpdate = true;
     return;
   }
-  drawDirectionalObstacleDistances(context, canvas, corridor?.obstacles);
+  // With the fish-eye PiP windows active, labels are redrawn on the HUD.
+  if (!(globalThis.autolifeFisheyePip?.getExclusionRects(canvas.width, canvas.height) || []).length)
+    drawDirectionalObstacleDistances(context, canvas, corridor?.obstacles);
   const arraysValid = ['left', 'centre', 'right'].every(
     key => Array.isArray(corridor?.[key]) && corridor[key].length >= 3
   );
@@ -1768,12 +1831,22 @@ function drawDirectionalObstacleDistances(context, canvas, obstacles) {
     const item = obstacles.directions[key];
     const distance = Number(item?.distance_m);
     if (!Number.isFinite(distance) || distance < 0 || distance > 1.0) continue;
-    const x = position[0] * canvas.width;
-    const y = position[1] * canvas.height;
+    let x = position[0] * canvas.width;
+    let y = position[1] * canvas.height;
     const colour = colours[item.level] || colours.green;
     const text = `${labels[key]} ${distance < 1 ? distance.toFixed(2) : distance.toFixed(1)}m`;
     context.font = 'bold 19px sans-serif';
     const width = Math.max(76, context.measureText(text).width + 24);
+    const rects = globalThis.autolifeFisheyePip?.getExclusionRects(canvas.width, canvas.height) || [];
+    const hit = rects.find(r => x + width / 2 > r.x && x - width / 2 < r.x + r.w
+        && y + 15 > r.y && y - 15 < r.y + r.h);
+    if (hit) {
+      // Keep the rear label left of the centered PiP and the bottom status bar.
+      const left = hit.x - width / 2 - 12;
+      const right = hit.x + hit.w + width / 2 + 12;
+      x = x <= canvas.width / 2 ? left : right;
+      x = Math.max(width / 2 + 12, Math.min(canvas.width - width / 2 - 12, x));
+    }
     roundRect(context, x - width / 2, y - 15, width, 30, 11, 'rgba(3, 14, 21, 0.58)');
     context.strokeStyle = colour;
     context.lineWidth = item.level === 'red' ? 2.0 : 1.2;
@@ -1829,10 +1902,24 @@ function drawWaypointNameEditor(context) {
   context.fillText('右摇杆选择 · A 输入 · X 退格 · Y 取消', 690, 780);
 }
 
+function syncFisheyePip() {
+  globalThis.autolifeFisheyePip?.sync({
+    visible: navUi.sessionActive && navUi.visible && navUi.cameraMode === 'rgbd',
+    menuVisible: navUi.menuVisible || Boolean(globalThis.squatModeUi?.gate?.open),
+    parent: document.querySelector('a-scene')?.camera?.el,
+    verticalOffset: NAV_PANEL_VERTICAL_OFFSET
+  });
+}
+
 function drawNavigationPanel() {
+  syncFisheyePip();
   const context = navUi.context;
   if (!context) return;
   context.clearRect(0, 0, navUi.canvas.width, navUi.canvas.height);
+  if ((globalThis.autolifeFisheyePip?.getExclusionRects(navUi.canvas.width, navUi.canvas.height) || []).length
+      && performance.now() - navUi.corridorReceivedAt < 450) {
+    drawDirectionalObstacleDistances(context, navUi.canvas, navUi.corridor?.obstacles);
+  }
   roundRect(context, 18, 14, 188, 50, 12, 'rgba(3, 14, 21, 0.82)');
   context.fillStyle = '#68e1ff';
   context.font = 'bold 31px sans-serif';
@@ -2024,7 +2111,7 @@ function drawNavigationPanel() {
   const dispatch = navUi.state?.task_dispatch;
   if (dispatch && !['idle', 'cancelled', 'completed'].includes(dispatch.state)) {
     const current = dispatch.current;
-    const pending = dispatch.state === 'pending_confirmation';
+    const pending = ['ready_to_start', 'waiting_localization'].includes(dispatch.state);
     const awaiting = dispatch.state === 'awaiting_action';
     const adjusting = dispatch.state === 'adjusting_height';
     const completed = dispatch.state === 'completed';
@@ -2036,7 +2123,7 @@ function drawNavigationPanel() {
     roundRect(context, 420, 72, 406, 142, 16, background);
     context.fillStyle = pending ? '#ffd276' : (failed ? '#ff91a7' : '#72f0b1');
     context.font = 'bold 22px sans-serif';
-    const title = pending ? '任务分发确认' : (
+    const title = pending ? '流程暂未启动' : (
       completed ? '任务串已完成' : `任务 ${Math.max(1, dispatch.current_index + 1)} / ${dispatch.total}${current?.operator_arrived ? ' · 人工到达' : ''}`
     );
     context.fillText(title, 442, 106);
@@ -2051,7 +2138,7 @@ function drawNavigationPanel() {
     context.fillStyle = pending ? '#ffd276' : '#9edbea';
     context.font = 'bold 16px sans-serif';
     const instruction = pending
-      ? `收到 ${dispatch.total} 项任务 · A接受 · 长按X退出`
+      ? '定位就绪后：菜单重试启动 · X退出'
       : (awaiting ? '长按A完成动作 · 长按X退出任务'
         : (navigationFailed ? '长按A重试 · B人工到达 · X退出'
         : (completed ? '任务流程已完成'
@@ -2178,6 +2265,7 @@ function drawNavigationPanel() {
   context.fillText(`画面 ${actualFps.toFixed(1)} FPS`, 1155, 856);
   context.restore();
   sendMonitorViewState();
+  squatModeUi.draw(context);
   if (navUi.texture) navUi.texture.needsUpdate = true;
 }
 
@@ -2188,6 +2276,7 @@ async function refreshNavigationState() {
     const response = await fetch('/api/navigation/state', { cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     navUi.state = await response.json();
+    squatModeUi.receivedAt = performance.now();
     if (navUi.state.task_catalog_error && navUi.catalogError !== navUi.state.task_catalog_error) {
       navShowNotice('任务库：' + navUi.state.task_catalog_error, 6000, '#ff8b8b');
     }
@@ -2230,17 +2319,17 @@ async function refreshNavigationState() {
     const taskVersion = Number(task?.version ?? -1);
     if (taskVersion !== navUi.taskVersion) {
       navUi.taskVersion = taskVersion;
-      if (task?.state === 'pending_confirmation') {
+      if (['ready_to_start', 'waiting_localization'].includes(task?.state)) {
         navUi.sessionActive = true;
         setNavigationView(true, false);
         navShowNotice(
-          `收到 ${task.total} 项任务\n按 A 接受 · 长按 X 1秒拒绝`,
+          `${task.message || '流程暂未启动'}\n定位就绪后打开菜单“重试启动流程”`,
           8000,
           '#ffd276'
         );
       } else if (task?.state === 'awaiting_action') {
         navShowNotice(
-          `已确认周围环境安全\n开始执行任务：${task.current?.task || ''}\n动作完成后，长按 A 1秒并松开确认完成动作`,
+          `任务姿态已到位\n开始执行任务：${task.current?.task || ''}\n动作完成后，长按 A 1秒并松开确认完成动作`,
           5000,
           '#72f0b1'
         );
@@ -2533,10 +2622,17 @@ function moveWaypointNameSelection(horizontal, vertical) {
 function activateNavigationItem() {
   const item = navUi.items[navUi.selected];
   if (!item) return;
-  if (item.kind.startsWith('custom-') || item.kind.startsWith('pose-')) {
+  if (item.kind.startsWith('custom-') || item.kind.startsWith('pose-') || item.kind.startsWith('teaching-')) {
     void vrCustom.activate(item);return;
   }
-  if (item.kind === 'task-skip') {
+  if (item.kind === 'fisheye-toggle') {
+    const pip = globalThis.autolifeFisheyePip;
+    if (!pip) { navShowNotice('鱼眼模块未加载，请刷新页面', 2200); return; }
+    const choice = pip.cycleMode();
+    navUi.corridorRenderKey = '';
+    navShowNotice(pip.enabled ? `${choice} · 收起菜单后显示` : '鱼眼小窗已关闭', 2000);
+    drawNavigationPanel();
+  } else if (item.kind === 'task-skip') {
     navUi.taskHoldCancelled = true;
     navUi.taskCompleteLatched = false;
     const task = navUi.state?.task_dispatch;
@@ -2575,10 +2671,16 @@ function activateNavigationItem() {
       navUi.exitPending = false;
       navShowNotice(`退出未完成：${error.message}，请重试`, 7000, '#ffcf70');
     });
+  } else if (item.kind === 'task-retry-start') {
+    navShowNotice('正在重新启动流程…', 2200, '#68e1ff');
+    void navigationAction('/api/tasks/start');
   } else if (item.kind === 'task-retry-pose') {
     navShowNotice('先锁定头部，再长按 A 1秒并松开重试当前姿态', 3000, '#ffcf70');
   } else if (item.kind === 'stop') {
     void navigationAction('/api/navigation/stop');
+  } else if (item.kind === 'squat-open') {
+    setBaseControlLatched(true);
+    squatModeUi.show();
   } else if (item.kind === 'relocalize') {
     void navigationAction('/api/navigation/relocalize');
   } else if (item.kind === 'manual-relocalize') {
@@ -2641,7 +2743,7 @@ function activateNavigationItem() {
   } else if (item.kind === 'template-start-task') {
     navShowNotice('右摇杆左右选择起始任务；之前步骤不执行', 2200, '#68e1ff');
   } else if (item.kind === 'gripper-force') {
-    navShowNotice('右摇杆左右调节闭合宽度；松开扳机全开', 1800, '#68e1ff');
+    navShowNotice('右摇杆左右调节闭合行程；松开扳机全开', 1800, '#68e1ff');
   } else if (item.kind === 'map-candidate') {
     if (item.active) {
       navShowNotice(`当前已加载地图：${item.name}`, 2200, '#72f0b1');
@@ -2697,13 +2799,8 @@ function activateNavigationItem() {
     const name = item.name;
     navUi.navigateConfirmName = null;
     navUi.selected = 0;
-    if (navUi.showroomModeEnabled) {
-      navShowNotice(`展厅模式：正在启动 ${name} 的单点任务`, 2400, '#68e1ff');
-      void navigationAction('/api/tasks/showroom-waypoint/start', { name });
-    } else {
-      navShowNotice(`正在前往：${name}`);
-      void navigationAction('/api/navigation/waypoint', { name });
-    }
+    navShowNotice(`正在前往：${name}（保持当前头部姿态）`);
+    void navigationAction('/api/navigation/waypoint', { name });
   } else if (item.kind === 'wash-complete') {
     navUi.washConfirm = true;
     navUi.dryConfirm = false;
@@ -2863,6 +2960,7 @@ AFRAME.registerComponent('autolife-vr-navigation', {
     // The UI canvas is independent, so video frames never redraw menu text.
     globalThis.addEventListener('autolife-camera-frame', () => {
       recordNavigationCameraFrame();
+      updateNavigationVideoGeometry();
       if (navUi.visible) bindNavigationVideoTexture();
     });
     connectNavigationWebsocket();
@@ -2904,6 +3002,7 @@ AFRAME.registerComponent('autolife-vr-navigation', {
       if (navUi.depthRoot) navUi.depthRoot.visible = false;
       navUi.backdropPanel?.setAttribute('visible', 'false');
       navUi.corridorPanel?.setAttribute('visible', 'false');
+      syncFisheyePip();
       disconnectDepthCloud();
       sendBaseDrive(false);
     });
@@ -2915,6 +3014,7 @@ AFRAME.registerComponent('autolife-vr-navigation', {
   },
 
   tick: function (time, delta) {
+    syncFisheyePip();
     // Consume at most the newest sample inside A-Frame's WebXR loop. This is
     // also a fallback for Quest Chromium versions that suspend window RAF.
     if (navUi.depthPendingFrame) renderPendingDepthCloudFrame();
@@ -2954,6 +3054,7 @@ AFRAME.registerComponent('autolife-vr-navigation', {
     const xPressed = Boolean(leftButtons[4]?.pressed);
     const aPressed = Boolean(rightButtons[4]?.pressed);
     const bPressed = Boolean(rightButtons[5]?.pressed);
+    if (squatModeUi.handleInput(left,right,{x:xPressed,y:yPressed,a:aPressed,b:bPressed})) return;
     // Chord ownership lasts until BOTH buttons are up, including staggered
     // release. Never leak Y+B into height, camera, head-lock or task skip.
     if (yPressed && !navUi.previous.y) navUi.yPressedAt = performance.now();
@@ -3026,25 +3127,6 @@ AFRAME.registerComponent('autolife-vr-navigation', {
     // Other menu entries, including delivery actions, retain their own A key.
     const menuOwnsA = navUi.menuVisible && !(taskState === 'failed'
       && navUi.items[navUi.selected]?.kind === 'task-retry-pose');
-    const pendingTaskDecision = taskState === 'pending_confirmation' && !menuOwnsA;
-    const taskDecisionKey = pendingTaskDecision
-      ? `${navUi.state?.task_dispatch?.version ?? ''}:${navUi.state?.task_dispatch?.updated_at ?? ''}`
-      : '';
-    if (taskDecisionKey !== navUi.taskDecisionKey) {
-      navUi.taskDecisionKey = taskDecisionKey;
-      // A task may arrive while the browser still remembers A as pressed.
-      // Require one observed release before accepting it, then use an
-      // independent latch instead of the fragile one-frame global edge.
-      navUi.taskAcceptArmed = pendingTaskDecision && !aPressed;
-      navUi.taskAcceptPending = false;
-    }
-    if (pendingTaskDecision && !aPressed && !xPressed) {
-      navUi.taskAcceptArmed = true;
-    }
-    if (!pendingTaskDecision) {
-      navUi.taskAcceptArmed = false;
-      navUi.taskAcceptPending = false;
-    }
     const taskCanExit = !['idle', 'cancelled', 'completed'].includes(taskState);
     const taskExitGestureEnabled = taskCanExit && !navUi.baseControlLatched && !deliveryMenuOwnsKeys;
     let taskAConsumed = false;
@@ -3099,16 +3181,6 @@ AFRAME.registerComponent('autolife-vr-navigation', {
       navUi.taskRejectHoldStartedAt = 0;
       navUi.taskRejectLatched = false;
       navUi.taskRejectCancelled = false;
-    }
-    if (pendingTaskDecision && aPressed && !xPressed
-        && navUi.taskAcceptArmed && !navUi.taskAcceptPending) {
-      taskAConsumed = true;
-      navUi.taskAcceptArmed = false;
-      navUi.taskAcceptPending = true;
-      navShowNotice('正在确认任务分发…', 1800, '#68e1ff');
-      void navigationAction('/api/tasks/confirm').finally(() => {
-        navUi.taskAcceptPending = false;
-      });
     }
     const taskHoldMode = menuOwnsA ? '' : (taskState === 'awaiting_action'
       ? 'complete' : (taskState === 'navigation_failed' ? 'retry-navigation-failure'
@@ -3214,6 +3286,9 @@ AFRAME.registerComponent('autolife-vr-navigation', {
       rightButtons[3]?.pressed || (!rightButtons[3] && rightButtons[2]?.pressed)
     );
     const bothStickButtonsPressed = leftStickPressed && rightStickPressed;
+    const rightMenuPressed = globalThis.autolifeTeaching
+      ? autolifeTeaching.menuPressed(rightStickPressed && !navUi.previous.rightStick)
+      : rightStickPressed && !navUi.previous.rightStick;
     if (bothStickButtonsPressed) {
       setBaseControlLatched(false, false);
     } else {
@@ -3226,8 +3301,7 @@ AFRAME.registerComponent('autolife-vr-navigation', {
         && !navUi.namingActive
         && !navUi.manualRelocalization
         && !navUi.baseControlLatched
-        && rightStickPressed
-        && !navUi.previous.rightStick
+        && rightMenuPressed
       ) {
         navUi.menuVisible = !navUi.menuVisible;
         navUi.selectionLatch = false;
@@ -3239,20 +3313,25 @@ AFRAME.registerComponent('autolife-vr-navigation', {
         drawNavigationPanel();
       }
     }
-    const deadman = Boolean(navUi.baseControlLatched);
+    if (navUi.baseControlLatched && rightMenuPressed && !bothStickButtonsPressed
+        && !squatModeUi.paused && !navUi.quickResetHeightSuppressed) squatModeUi.show();
+    const deadman = Boolean(navUi.baseControlLatched && !squatModeUi.paused);
     let bodyHeightDirection = 0;
     if (navUi.quickResetHeightSuppressed) {
       // Release height ownership immediately.  The drive worker is
       // latest-frame-only, so this replaces any queued lowering sample.
       navUi.bodyHeightEngaged = false;
-    } else if (deadman && !pendingTaskDecision && xPressed !== yPressed
+    } else if (deadman && xPressed !== yPressed
         && (!yPressed || performance.now() - (navUi.yPressedAt || 0) >= 250)) {
       // X lowers the body and Y raises it. The height profile stays engaged
       // until chassis takeover is cancelled, so releasing a key holds height.
       bodyHeightDirection = xPressed ? 1 : -1;
       navUi.bodyHeightEngaged = true;
     }
-    if (deadman) {
+    if (navUi.baseControlLatched && squatModeUi.paused) {
+      sendBaseDrive(true,0,0,0,false,0,true);
+      navUi.driveInputWasActive = true;
+    } else if (deadman) {
       sendBaseDrive(
         true,
         -(leftAxes[3] || 0),
@@ -3267,7 +3346,7 @@ AFRAME.registerComponent('autolife-vr-navigation', {
       navUi.driveInputWasActive = false;
     }
 
-    if (navUi.visible && !deadman) {
+    if (navUi.visible && !navUi.baseControlLatched) {
       if (navUi.manualRelocalization) {
         updateManualRelocalization(rightAxes[2] || 0, rightAxes[3] || 0, delta);
         if (aPressed && !navUi.previous.a && !xPressed && !taskAConsumed) {
@@ -3318,7 +3397,7 @@ AFRAME.registerComponent('autolife-vr-navigation', {
           if (selectedItem?.kind === 'template-start-task') {
             adjustTemplateStartTask(horizontalAxis > 0 ? 1 : -1);
           } else {
-            adjustGripperWidth(horizontalAxis > 0 ? 1 : -1);
+            adjustGripperPosition(horizontalAxis > 0 ? 1 : -1);
           }
           navUi.forceAdjustLatch = true;
         }
@@ -3367,8 +3446,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const config = await fetch('/api/config', { cache: 'no-store' }).then(response => response.json());
     scheduleNavigationVersionCheck(config.navigation?.ui_version);
+    globalThis.autolifeFisheyePip?.configure(config.navigation?.fisheye);
     navUi.enabled = config.navigation?.enabled === true;
-    navUi.gripperWidthCm = Number(config.navigation?.gripper_closed_width_cm ?? 0.0);
+    navUi.gripperClosedPercent = Number(config.navigation?.gripper_closed_percent ?? 90.0);
     navUi.precisionDepthEnabled = config.navigation?.precision_cloud?.enabled === true;
     navUi.depthMinimumM = Number(
       config.navigation?.precision_cloud?.minimum_m ?? 0.20

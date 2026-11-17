@@ -216,15 +216,15 @@ def test_navigation_launch_selects_pitch_only_waist_assistance():
     launch = (
         Path(__file__).parents[1] / 'launch' / 'full_vr_navigation.launch.py'
     ).read_text(encoding='utf-8')
-    assert "get_package_share_directory('openarmx_teleop_vr_306_v4')" in launch
+    assert "get_package_share_directory('openarmx_teleop_vr_306_v5')" in launch
     assert 'openarmx_teleop_vr_306_v3' not in launch
     assert "'waist_follow_profile': 'forward_pitch_only'" in launch
     assert "'waist_forward_assist_max_lean_deg': '10.0'" in launch
-    assert "'waist_forward_assist_command_lead_deg': '5.0'" in launch
-    assert "'forward_position_scale': '1.10'" in launch
-    assert "'wrist_reach_reserve_enabled': 'true'" in launch
-    assert "'wrist_reach_reserve_minimum_m': '0.008'" in launch
-    assert "'wrist_reach_reserve_maximum_m': '0.035'" in launch
+    assert "'waist_forward_assist_command_lead_deg': '8.0'" in launch
+    assert "'forward_position_scale': '1.0'" in launch
+    assert "'wrist_reach_reserve_enabled': 'false'" in launch
+    assert "'wrist_reach_reserve_minimum_m': '0.015'" in launch
+    assert "'wrist_reach_reserve_maximum_m': '0.070'" in launch
     assert "'wrist_reach_reserve_full_angle_deg': '70.0'" in launch
     assert "openarmx_teleop_vr_navigation_306.corridor_projection_node" in launch
     assert "'publish_rate_hz:=25.0'" in launch
@@ -279,8 +279,11 @@ def test_bridge_uses_real_vendor_gripper_force_ratio_and_private_height_topic():
     ).read_text(encoding='utf-8')
     assert '/control_set_left_gripper_force_ratio_0_' in source
     assert '/control_set_right_gripper_force_ratio_0_' in source
-    assert 'from openarmx_teleop_vr_306_v4.vr_web_bridge import VrWebBridge' in source
-    assert '/openarmx_teleop_vr_306_v4/body_height_command' in source
+    assert 'from openarmx_teleop_vr_306_v5.vr_web_bridge import VrWebBridge' in source
+    assert '/openarmx_teleop_vr_306_v5/body_height_command' in source
+    assert '/openarmx_teleop_vr_306_v5/task_head_target' in source
+    assert '/independent_vr_mapper_306_v5/set_parameters_atomically' in source
+    assert "'/api/calibrate-reach', self._api_calibrate_reach" in source
     assert 'openarmx_teleop_vr_306_v3' not in source
     assert "'enabled': height_enabled" in source
     assert "'direction': height_direction" in source
@@ -296,7 +299,7 @@ def test_bridge_uses_real_vendor_gripper_force_ratio_and_private_height_topic():
     assert 'self._publish_manual_override(False)' in source
 
 
-def test_package_and_startup_guard_use_v4_without_allowing_parallel_teleop():
+def test_package_and_startup_guard_use_v5_without_allowing_parallel_teleop():
     package_root = Path(__file__).parents[1]
     package_xml = (package_root / 'package.xml').read_text(encoding='utf-8')
     startup = (
@@ -306,13 +309,13 @@ def test_package_and_startup_guard_use_v4_without_allowing_parallel_teleop():
         package_root / 'openarmx_teleop_vr_navigation_306'
         / 'corridor_projection_node.py'
     ).read_text(encoding='utf-8')
-    assert '<depend>openarmx_teleop_vr_306_v4</depend>' in package_xml
+    assert '<depend>openarmx_teleop_vr_306_v5</depend>' in package_xml
     assert '<depend>openarmx_teleop_vr_306_v3</depend>' not in package_xml
     assert 'openarmx_306_v[0-9]+_(arm_controller|mapper)' in startup
     assert 'openarmx_teleop_vr_306_v[0-9]+' in startup
     assert '(controller_node|vr_mapper_node|vr_web_bridge)' in startup
-    assert 'from openarmx_teleop_vr_306_v4.kinematics import (' in corridor
-    assert 'from openarmx_teleop_vr_306_v4.schema import parse_joint_feedback' in corridor
+    assert 'from openarmx_teleop_vr_306_v5.kinematics import (' in corridor
+    assert 'from openarmx_teleop_vr_306_v5.schema import parse_joint_feedback' in corridor
 
 
 def test_gripper_force_ratio_is_bounded_and_published_to_both_hands():

@@ -90,7 +90,7 @@ class TaskWorkflow:
         self._source_text = ""
         self._tasks = []
         self._index = -1
-        self._message = "等待网页端分发任务"
+        self._message = "请选择任务流程"
         self._updated_at = time.time()
         self._execution_id = ''
 
@@ -103,7 +103,7 @@ class TaskWorkflow:
     def submit(self, source_text: str, tasks: list[dict], allow_unlisted=False):
         with self._lock:
             if self._state in ACTIVE_STATES:
-                raise RuntimeError("当前任务串仍在执行，请完成或取消后再分发新任务")
+                raise RuntimeError("当前任务串仍在执行，请完成或取消后再启动新任务")
             accepted = []
             for item in tasks:
                 task = str(item.get("task", "")).strip()
@@ -123,20 +123,20 @@ class TaskWorkflow:
             self._tasks = accepted
             self._execution_id = uuid.uuid4().hex
             self._index = 0
-            self._state = "pending_confirmation"
-            self._touch(f"收到{len(accepted)}项任务，等待VR遥操者确认分发")
+            self._state = "ready_to_start"
+            self._touch(f"收到{len(accepted)}项任务，正在准备启动")
             return self.snapshot()
 
     def confirm(self, waypoint_names):
         with self._lock:
-            if self._state != "pending_confirmation":
-                raise RuntimeError("当前没有待确认的任务串")
+            if self._state not in {"ready_to_start", "waiting_localization"}:
+                raise RuntimeError("当前没有待启动的任务串")
             known = set(waypoint_names)
             missing = sorted({item["location"] for item in self._tasks} - known)
             if missing:
                 raise ValueError("航点库缺少地点：" + "、".join(missing))
             self._state = "preparing"
-            self._touch("任务分发已确认，正在准备第一个任务")
+            self._touch("正在准备第一个任务")
             return copy.deepcopy(self._tasks[self._index])
 
     def navigation_started(self):
@@ -220,10 +220,10 @@ class TaskWorkflow:
                 return False
             if self._state in {"completed", "cancelled"}:
                 return False
-            self._state = "pending_confirmation"
+            self._state = "waiting_localization"
             self._touch(
                 message
-                or "自动重定位失败，请在导航界面进行手动重定位后再次确认任务"
+                or "自动重定位失败，请在导航界面进行手动重定位后在菜单重试启动"
             )
             return True
 

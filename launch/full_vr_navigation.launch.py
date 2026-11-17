@@ -11,7 +11,7 @@ from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
-    teleop_share = get_package_share_directory('openarmx_teleop_vr_306_v4')
+    teleop_share = get_package_share_directory('openarmx_teleop_vr_306_v5')
     navigation_share = get_package_share_directory('control_center_navigation')
 
     topic_suffix = LaunchConfiguration('topic_suffix')
@@ -29,6 +29,7 @@ def generate_launch_description():
     corridor_projection_enabled = LaunchConfiguration('corridor_projection_enabled')
     task_voice_enabled = LaunchConfiguration('task_voice_enabled')
     task_voice_port = LaunchConfiguration('task_voice_port')
+    ros_domain_id = LaunchConfiguration('ros_domain_id')
 
     teleop = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -37,27 +38,20 @@ def generate_launch_description():
         launch_arguments={
             'topic_suffix': topic_suffix,
             'dry_run': dry_run,
+            'arm_enable_parallel_stability': 'true',
             'start_web': 'false',
             'rgbd_camera_enabled': 'false',
+            'ros_domain_id': ros_domain_id,
             'waist_follow_profile': 'forward_pitch_only',
-            'waist_forward_assist_max_lean_deg': '10.0',
-            # Increase only forward reach so a fully extended operator arm
-            # reaches the robot's guarded 26 cm shell more naturally. The
-            # absolute workspace and wrist reserve remain authoritative.
-            'forward_position_scale': '1.10',
-            # Keep forward bending deliberately slower than the prior 10-deg
-            # navigation override. The 5-deg feedback window affects only
-            # reach-triggered waist pitch, not arm or body-height speed.
-            'waist_forward_assist_command_lead_deg': '5.0',
-            # Exact elbow lockout is a wrist singularity. Keep only a small
-            # orientation-dependent reach reserve. The old
-            # 15--70 mm reserve kept the elbow visibly bent during a natural
-            # forward reach; 8--35 mm still protects wrist motion near the
-            # straight-arm singularity without shortening the usable reach as
-            # aggressively.
-            'wrist_reach_reserve_enabled': 'true',
-            'wrist_reach_reserve_minimum_m': '0.008',
-            'wrist_reach_reserve_maximum_m': '0.035',
+            'waist_forward_assist_max_lean_deg': '12.0',
+            # Match the currently deployed standalone V5 arm mapping.
+            'forward_position_scale': '1.0',
+            # Match V5's feedback-bounded forward waist assist.
+            'waist_forward_assist_command_lead_deg': '8.0',
+            # Match the current V5 reserve configuration.
+            'wrist_reach_reserve_enabled': 'false',
+            'wrist_reach_reserve_minimum_m': '0.015',
+            'wrist_reach_reserve_maximum_m': '0.070',
             'wrist_reach_reserve_start_angle_deg': '0.0',
             'wrist_reach_reserve_full_angle_deg': '70.0',
             # Navigation view stays visually level: retain Pitch/Yaw tracking
@@ -66,20 +60,24 @@ def generate_launch_description():
             # X/Y height control is accepted only by this navigation launch;
             # the standalone ~/vr306 behavior remains unchanged.
             'body_height_control_enabled': 'true',
-            # ~/vr306nav-only motion profile. Reset derivative limits follow
-            # time scaling: velocity x1.5, acceleration x1.5^2 and jerk
-            # x1.5^3, producing an approximately 1.5x faster synchronized
-            # Ruckig reset without changing targets or joint bounds.
+            # Keep navigation's guarded body height, while using current V5
+            # reset derivative limits and current V5 reset joint parameters.
             'body_height_lowering_rate_m_sec': '0.18',
-            'quick_reset_max_velocity_deg_sec': '35.1',
-            'quick_reset_max_acceleration_deg_sec2': '146.25',
-            'quick_reset_max_jerk_deg_sec3': '1096.875',
-            'quick_reset_neck_max_velocity_deg_sec': '45.0',
-            'quick_reset_neck_max_acceleration_deg_sec2': '187.5',
-            'quick_reset_neck_max_jerk_deg_sec3': '1406.25',
+            'quick_reset_max_velocity_deg_sec': '46.8',
+            'quick_reset_max_acceleration_deg_sec2': '130.0',
+            'quick_reset_max_jerk_deg_sec3': '650.0',
+            'quick_reset_neck_max_velocity_deg_sec': '30.0',
+            'quick_reset_neck_max_acceleration_deg_sec2': '83.333',
+            'quick_reset_neck_max_jerk_deg_sec3': '416.667',
             # Operator-selected measured reset pose on robot 300, 2026-10-14.
-            'quick_reset_neck_joints': '[-0.032785,-29.998649,-1.999910]',
-            'head_neutral_joints_deg': '[0.0, -20.0, 0.0]',
+            'quick_reset_neck_joints': '[0.0,0.0,0.0]',
+            # S3 neck pitch rotates around +Y; looking down in WebXR is -X.
+            # Zero is the V5 reset reference. Restrict pitch to the sampled
+            # collision-free envelope until physical mesh calibration exists.
+            'head_neutral_joints_deg': '[0.0, 0.0, 0.0]',
+            'head_axis_gain': '[1.25, -1.25, 1.25]',
+            'head_joint_minimum_deg': '[-18.0, -12.0, -55.0]',
+            'head_joint_maximum_deg': '[18.0, 30.0, 55.0]',
             # Every hardware-enable and X+A reset ends with the neck held.
             # The operator explicitly hands head motion back with VR button B.
             'lock_head_follow_on_enable_reset': 'true',
@@ -105,6 +103,7 @@ def generate_launch_description():
             # for this VR workflow. Keep the generic control-center bridge
             # disabled so navigation events are not spoken twice.
             'enable_text_voice_control': 'false',
+            'text_voice_ros_domain_id': ros_domain_id,
             'enable_proximity_voice_alert': 'false',
             'startup_navigation_on_initialpose': 'true',
             'enable_odom_topic_relay': 'true',
@@ -120,7 +119,13 @@ def generate_launch_description():
             '--ros-args',
             '-p', ['host:=', web_host],
             '-p', ['https_port:=', web_port],
+            '-p', ['teaching_topic_suffix:=', topic_suffix],
             '-p', ['rgbd_camera_enabled:=', navigation_rgbd_camera_enabled],
+            '-p', 'rgbd_camera_expected_width:=640',
+            '-p', 'rgbd_camera_expected_height:=480',
+            '-p', 'rgbd_camera_output_width:=0',
+            '-p', 'rgbd_camera_output_height:=0',
+            '-p', 'rgbd_camera_maximum_fps:=30.0',
         ],
         output='screen',
     )
@@ -140,8 +145,8 @@ def generate_launch_description():
             '-p', 'side_margin_m:=0.05',
             '-p', 'latency_compensation_seconds:=0.10',
             '-p', 'maximum_preview_heading_degrees:=22.0',
-            '-p', 'front_laser_topic:=/topic_gv_front_lidar_0_300',
-            '-p', 'rear_laser_topic:=/topic_gv_rear_lidar_0_300',
+            '-p', 'front_laser_topic:=/topic_gv_front_lidar_0_345',
+            '-p', 'rear_laser_topic:=/topic_gv_rear_lidar_0_345',
             '-p', 'chassis_length_m:=0.60',
             '-p', 'chassis_width_m:=0.60',
             '-p', 'laser_maximum_range_m:=1.50',
@@ -184,14 +189,15 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        DeclareLaunchArgument('topic_suffix', default_value='0_300'),
+        DeclareLaunchArgument('topic_suffix', default_value='0_345'),
+        DeclareLaunchArgument('ros_domain_id', default_value='0'),
         DeclareLaunchArgument('dry_run', default_value='true'),
         DeclareLaunchArgument('web_host', default_value='0.0.0.0'),
         DeclareLaunchArgument('web_port', default_value='8445'),
         DeclareLaunchArgument(
             'navigation_rgbd_camera_enabled', default_value='true'
         ),
-        DeclareLaunchArgument('start_navigation_stack', default_value='true'),
+        DeclareLaunchArgument('start_navigation_stack', default_value='false'),
         DeclareLaunchArgument('corridor_projection_enabled', default_value='true'),
         DeclareLaunchArgument('task_voice_enabled', default_value='true'),
         DeclareLaunchArgument('task_voice_port', default_value='8766'),

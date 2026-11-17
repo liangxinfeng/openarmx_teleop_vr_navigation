@@ -1,0 +1,29 @@
+{
+  "package.xml": [
+    "ament_index_python",
+    "ament_python",
+    "autolife_s2_voice",
+    "control_center_chassis_guard",
+    "control_center_joint_control",
+    "control_center_navigation",
+    "control_center_service_manager",
+    "geometry_msgs",
+    "launch",
+    "launch_ros",
+    "nav_msgs",
+    "openarmx_teleop_vr_306_v5",
+    "python3-aiohttp",
+    "python3-numpy",
+    "python3-pytest",
+    "python3-xlib",
+    "python3-yaml",
+    "rcl_interfaces",
+    "rclpy",
+    "sensor_msgs",
+    "std_msgs",
+    "std_srvs",
+    "text_voice_control",
+    "tf2_ros",
+    "visualization_msgs"
+  ]
+}

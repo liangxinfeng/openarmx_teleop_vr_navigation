@@ -6,8 +6,8 @@ from types import SimpleNamespace as NS
 import numpy as np
 import pytest
 from unittest.mock import Mock
-from openarmx_teleop_vr_306_v4.controller_node import IndependentArmController as Controller
-from openarmx_teleop_vr_306_v4.body_height import body_height_joint_targets
+from openarmx_teleop_vr_306_v5.controller_node import IndependentArmController as Controller
+from openarmx_teleop_vr_306_v5.body_height import body_height_joint_targets
 from openarmx_teleop_vr_navigation_306.navigation_web_bridge import NavigationVrWebBridge as Bridge
 from openarmx_teleop_vr_navigation_306.task_workflow import TaskWorkflow
 
@@ -60,6 +60,12 @@ def subject_for_task(monkeypatch, data, height_cm=30):
         _task_height_target_m=None,_task_height_timeout_seconds=1.25,
         _task_height_stable_seconds=.125,_teleop_status_snapshot=lambda:(copy.deepcopy(data),.01,True),
         _body_height_publisher=NS(publish=lambda m:sent.append(m.data)))
+    # Mock a connected, fresh VR session required by the current task bridge.
+    subject._client_lock=threading.Lock()
+    subject._control_session='test-session'
+    subject._control_peer=object()
+    subject._last_realtime_packet=clock[0]
+    subject.get_parameter=lambda name:NS(value=120.)
     subject._task_height_tick=lambda:Bridge._task_height_tick(subject)
     data['backend']['body_height']['feedback_time_monotonic']=clock[0]
     return subject,wf,clock,sent

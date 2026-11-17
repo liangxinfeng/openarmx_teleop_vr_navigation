@@ -1,0 +1,46 @@
+{
+  "revision": "345-surround-20261109-v1",
+  "state": "estimated",
+  "source": "345 native JPEG lens rings; neutral stance estimates",
+  "front": {
+    "cx": 329,
+    "cy": 159,
+    "radius": 166,
+    "focal": 104,
+    "pitch": 3,
+    "yaw": 0,
+    "roll": 0,
+    "rotate180": false,
+    "x": 0.032,
+    "z": 0.069,
+    "height": 1.565,
+    "lowerCut": 125,
+    "lowerSlope": 0.07
+  },
+  "rear": {
+    "cx": 331,
+    "cy": 195,
+    "radius": 171,
+    "focal": 103,
+    "pitch": -3,
+    "yaw": 180,
+    "roll": 0,
+    "rotate180": true,
+    "x": 0.001,
+    "z": -0.1,
+    "height": 1.575,
+    "lowerCut": 162,
+    "lowerSlope": 0
+  },
+  "map": {
+    "halfWidth": 1.575,
+    "halfDepth": 2.1,
+    "bodyHalfWidth": 0.3,
+    "bodyHalfDepth": 0.37
+  },
+  "preview": {
+    "hfov": 110,
+    "lookDown": 26,
+    "mirrorRear": true
+  }
+}

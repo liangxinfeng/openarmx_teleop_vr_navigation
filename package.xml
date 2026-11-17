@@ -7,6 +7,7 @@
   <license>Proprietary</license>
   <buildtool_depend>ament_python</buildtool_depend>
   <depend>rclpy</depend>
+  <exec_depend>tf2_ros</exec_depend>
   <exec_depend>control_center_service_manager</exec_depend>
   <depend>rcl_interfaces</depend>
   <depend>geometry_msgs</depend>
@@ -17,7 +18,9 @@
   <depend>visualization_msgs</depend>
   <exec_depend>python3-numpy</exec_depend>
   <depend>control_center_navigation</depend>
-  <depend>openarmx_teleop_vr_306_v4</depend>
+  <exec_depend>control_center_chassis_guard</exec_depend>
+  <exec_depend>control_center_joint_control</exec_depend>
+  <depend>openarmx_teleop_vr_306_v5</depend>
   <exec_depend>autolife_s2_voice</exec_depend>
   <exec_depend>text_voice_control</exec_depend>
   <exec_depend>ament_index_python</exec_depend>

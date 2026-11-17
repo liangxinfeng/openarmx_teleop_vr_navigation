@@ -3,6 +3,7 @@
 import asyncio
 import json
 import math
+import secrets
 from pathlib import Path
 import struct
 import threading
@@ -16,6 +17,8 @@ from nav_msgs.msg import OccupancyGrid
 from nav2_msgs.srv import LoadMap
 import rclpy
 from rclpy.parameter import Parameter
+from rclpy.time import Time
+from tf2_ros import Buffer, TransformListener, TransformException
 from rcl_interfaces.srv import SetParametersAtomically
 from rclpy.executors import ExternalShutdownException
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
@@ -31,17 +34,32 @@ from control_center_navigation.srv import (
     SaveWaypoint,
     SwitchWaypointMap,
 )
-from openarmx_teleop_vr_306_v4.vr_web_bridge import VrWebBridge
-from openarmx_teleop_vr_306_v4.gripper_aperture import checked_width, load_width
+from openarmx_teleop_vr_306_v5.vr_web_bridge import VrWebBridge
+from openarmx_teleop_vr_306_v5.gripper_aperture import checked_closure, load_closure
 from .delivery_handoff import DeliveryHandoffMonitor
 from .simple_task_catalog import load_catalog, lowering_cm, head_pitch_deg
 from .session_controls import task_menu_catalog, compose_menu_tasks, pose_values
 from .depth_cloud_stream import DepthCloudStream
+from .fisheye_camera import FisheyeCamera, FisheyeEndpoint
+from .fisheye_profile import load_profile
 from .task_workflow import (
     TaskWorkflow,
     navigation_terminal_outcome,
     task_chain_templates,
 )
+
+
+def _navigation_source_directory():
+    """Resolve the shared navigation data in standalone or legacy workspaces."""
+    share = Path(get_package_share_directory('control_center_navigation')).resolve()
+    for ancestor in share.parents:
+        for candidate in (
+            ancestor / 'src' / 'control_center_navigation',
+            ancestor / 'src' / 'autolife_robot_control_center' / 'control_center_navigation',
+        ):
+            if (candidate / 'package.xml').is_file():
+                return candidate
+    return share
 
 
 def _png_chunk(kind, payload):
@@ -125,6 +143,8 @@ class NavigationVrWebBridge(VrWebBridge):
         self._navigation_ready = threading.Event()
         super().__init__()
 
+        self.declare_parameter('teaching_topic_suffix', '0_345')
+
         self.declare_parameter('manual_cmd_vel_topic', '/manual_cmd_vel')
         self.declare_parameter('depth_cloud_minimum_m', 0.20)
         self.declare_parameter('depth_cloud_maximum_m', 5.0)
@@ -144,14 +164,10 @@ class NavigationVrWebBridge(VrWebBridge):
         self.declare_parameter(
             'corridor_projection_topic', '/vr_navigation/corridor_projection'
         )
-        control_center_source = Path(
-            '/home/ubuntu/ros2_ws/src/autolife_robot_control_center'
-        )
-        navigation_source = control_center_source / 'control_center_navigation'
+        navigation_source = _navigation_source_directory()
         self.declare_parameter(
             'map_library_directories',
             [
-                str(control_center_source / 'multi_lidar_slam' / 'maps'),
                 str(navigation_source / 'maps'),
             ],
         )
@@ -165,21 +181,20 @@ class NavigationVrWebBridge(VrWebBridge):
         self.declare_parameter('maximum_forward_speed', 0.35)
         self.declare_parameter('maximum_lateral_speed', 0.25)
         self.declare_parameter('maximum_yaw_speed', 0.80)
-        self.declare_parameter('linear_acceleration', 1.2)
-        self.declare_parameter('yaw_acceleration', 2.4)
+        # Acceleration/deceleration come from the shared chassis smoothing config.
         self.declare_parameter('drive_watchdog_seconds', 0.36)
         self.declare_parameter('drive_takeover_settle_seconds', 0.12)
         self.declare_parameter(
             'body_height_command_topic',
-            '/openarmx_teleop_vr_306_v4/body_height_command',
+            '/openarmx_teleop_vr_306_v5/body_height_command',
         )
         self.declare_parameter(
             'left_gripper_force_ratio_topic',
-            '/control_set_left_gripper_force_ratio_0_300',
+            '/control_set_left_gripper_force_ratio_0_345',
         )
         self.declare_parameter(
             'right_gripper_force_ratio_topic',
-            '/control_set_right_gripper_force_ratio_0_300',
+            '/control_set_right_gripper_force_ratio_0_345',
         )
         self.declare_parameter('gripper_force_minimum_ratio', 0.0)
         self.declare_parameter('gripper_force_maximum_current', 10.0)
@@ -227,6 +242,10 @@ class NavigationVrWebBridge(VrWebBridge):
         self._map_meta = None
         self._pose = None
         self._pose_time = 0.0
+        self._last_tf_pose_time = 0.0
+        self._pose_tf_buffer = Buffer()
+        self._pose_tf_listener = TransformListener(self._pose_tf_buffer, self)
+        self.create_timer(0.05, self._refresh_tf_pose)
         self._navigation_status = {'state': 'waiting', 'detail': '等待导航状态'}
         self._relocalization_status = {'state': 'waiting', 'detail': '等待全局重定位'}
         self._waypoints = []
@@ -240,6 +259,9 @@ class NavigationVrWebBridge(VrWebBridge):
         self._drive_sample = None
         self._drive_time = 0.0
         self._drive_was_active = False
+        # The same config and implementation used by the control center.
+        from control_center_chassis_guard import VelocityRamp
+        self._drive_ramp = VelocityRamp()
         self._drive_current = [0.0, 0.0, 0.0]
         self._last_drive_tick = time.monotonic()
         self._drive_settle_until = 0.0
@@ -253,7 +275,7 @@ class NavigationVrWebBridge(VrWebBridge):
         self._gripper_force_ratio = 0.35
         self._gripper_width_client = self.create_client(
             SetParametersAtomically,
-            '/independent_vr_mapper_306_v4/set_parameters_atomically',
+            '/independent_vr_mapper_306_v5/set_parameters_atomically',
         )
         self._corridor_lock = threading.Lock()
         self._corridor_payload = None
@@ -382,7 +404,7 @@ class NavigationVrWebBridge(VrWebBridge):
             10,
         )
         self._task_head_publisher = self.create_publisher(
-            String, '/openarmx_teleop_vr_306_v4/task_head_target', 1
+            String, '/openarmx_teleop_vr_306_v5/task_head_target', 1
         )
         self._left_gripper_force_publisher = self.create_publisher(
             String,
@@ -456,6 +478,7 @@ class NavigationVrWebBridge(VrWebBridge):
         self._cancel_navigation_client = self.create_client(Trigger, '/cancel_navigation')
         self._resume_navigation_client = self.create_client(Trigger, '/resume_navigation')
         self._stop_ready_client = self.create_client(Trigger, '/navigation_stop_ready')
+        self._vr_navigation_rearm_client = self.create_client(Trigger, '/control_center/rearm_vr_navigation')
         self._operator_arrival_client = self.create_client(NavigateToWaypoint, '/operator_confirm_arrival')
         self._relocalize_client = self.create_client(
             Trigger, str(self.get_parameter('relocalization_service').value)
@@ -465,6 +488,14 @@ class NavigationVrWebBridge(VrWebBridge):
             SwitchWaypointMap, '/switch_waypoint_map'
         )
         self.create_timer(0.02, self._drive_tick)
+        # The shared navigation stack requires a live operator heartbeat.
+        # VR must provide its own session; never fake a control-center process.
+        self._operator_heartbeat_pub = self.create_publisher(
+            String, '/control_center/operator_heartbeat', 10)
+        self._operator_heartbeat_id = 'vr-nav-' + secrets.token_hex(12)
+        self._operator_heartbeat_owner = None
+        self._operator_heartbeat_owner_since = 0.0
+        self.create_timer(0.05, self._operator_heartbeat_tick)
         self.create_timer(1.0, self._request_waypoint_list)
         self.create_timer(0.05, self._task_height_tick)
         self.create_timer(1.0, self._delivery_chain_tick)
@@ -485,6 +516,22 @@ class NavigationVrWebBridge(VrWebBridge):
                 ),
                 include_color=True,
             )
+        # Snapshot once per VR process; desktop sync applies on the next start.
+        try:
+            defaults = json.loads((self._web_dir / 'fisheye360_defaults.json').read_text(encoding='utf-8'))
+            self._fisheye_surround_profile, self._fisheye_calibration_source = load_profile(defaults)
+        except (OSError, ValueError) as error:
+            self._fisheye_surround_profile = None
+            self._fisheye_calibration_source = 'unavailable'
+            self.get_logger().warn(f'Fish-eye surround profile unavailable: {error}')
+        self._fisheye_front = FisheyeCamera(
+            module_name='mod_camera_head_right', image_key='head_right',
+            label='前', consumer_name='vr345_fisheye_front')
+        self._fisheye_rear = FisheyeCamera(
+            module_name='mod_camera_head_rear', image_key='head_rear',
+            label='后', consumer_name='vr345_fisheye_rear')
+        self._fisheye_front_endpoint = FisheyeEndpoint(self._fisheye_front)
+        self._fisheye_rear_endpoint = FisheyeEndpoint(self._fisheye_rear)
         self._navigation_ready.set()
         self.get_logger().info(
             'VR navigation bridge ready: left stick=XY, right stick=turn, '
@@ -500,9 +547,10 @@ class NavigationVrWebBridge(VrWebBridge):
     async def _api_config(self, request):
         base_response = await super()._api_config(request)
         payload = json.loads(base_response.text)
+        payload['vr_images']['toggle_button'] = 'Y'
         payload['navigation'] = {
             'enabled': True,
-            'ui_version': 'yundie-300-template-start-v2026101401',
+            'ui_version': 'yundie-306-navigation-v2026111102',
             'panel_toggle_button': 'Y',
             'confirm_button': 'A',
             'relocalize_button': 'X',
@@ -512,7 +560,7 @@ class NavigationVrWebBridge(VrWebBridge):
             'websocket_path': '/navigation/ws',
             'drive_websocket_path': '/navigation/drive',
             'gripper_force_ratio': self._gripper_force_ratio,
-            'gripper_closed_width_cm': load_width(),
+            'gripper_closed_percent': load_closure(),
             'gripper_force_minimum_ratio': float(
                 self.get_parameter('gripper_force_minimum_ratio').value
             ),
@@ -522,6 +570,25 @@ class NavigationVrWebBridge(VrWebBridge):
             'gripper_force_step': 0.1,
             'showroom_mode_enabled': self._showroom_mode_enabled,
             'voice_enabled': self._voice_enabled,
+            'fisheye': {
+                'enabled': True, 'default_visible': False,
+                'surround_profile': self._fisheye_surround_profile,
+                'calibration_source': self._fisheye_calibration_source,
+                'front': {
+                    'label': '前', 'image_key': 'head_right',
+                    'websocket_path': '/ws/fisheye-front',
+                    'status_url': '/api/fisheye-front/status',
+                    'width': 640, 'height': 360, 'maximum_fps': 10,
+                    'producer_status': self._fisheye_front.status(),
+                },
+                'rear': {
+                    'label': '后', 'image_key': 'head_rear',
+                    'websocket_path': '/ws/fisheye-rear',
+                    'status_url': '/api/fisheye-rear/status',
+                    'width': 640, 'height': 360, 'maximum_fps': 10,
+                    'producer_status': self._fisheye_rear.status(),
+                },
+            },
             'precision_cloud': {
                 'enabled': self._precision_cloud_stream is not None,
                 'websocket_path': '/navigation/precision-cloud',
@@ -638,7 +705,27 @@ class NavigationVrWebBridge(VrWebBridge):
             self._map_meta = meta
             self._map_version += 1
 
+    def _refresh_tf_pose(self):
+        """Use the same map->base_link pose as navigation; AMCL may be silent at rest."""
+        try:
+            tf = self._pose_tf_buffer.lookup_transform('map', 'base_link', Time())
+            stamp = tf.header.stamp.sec + tf.header.stamp.nanosec * 1e-9
+            age = self.get_clock().now().nanoseconds * 1e-9 - stamp
+            if not -0.6 <= age <= 0.75:
+                return
+            p, q = tf.transform.translation, tf.transform.rotation
+            values = (float(p.x), float(p.y), quaternion_yaw(q))
+            if not all(math.isfinite(v) for v in values):
+                return
+            with self._nav_lock:
+                self._pose = dict(zip(('x', 'y', 'yaw'), values))
+                self._pose_time = self._last_tf_pose_time = time.monotonic()
+        except TransformException:
+            return
+
     def _on_pose(self, message):
+        if time.monotonic() - getattr(self, '_last_tf_pose_time', 0.0) < 0.75:
+            return
         pose = message.pose.pose
         with self._nav_lock:
             self._pose = {
@@ -655,6 +742,27 @@ class NavigationVrWebBridge(VrWebBridge):
             return payload if isinstance(payload, dict) else {'state': str(payload)}
         except (TypeError, ValueError):
             return {'state': 'update', 'detail': str(message.data)}
+
+    def _operator_heartbeat_tick(self):
+        """Publish only while the current VR owner supplies fresh XR input."""
+        now = time.monotonic()
+        with self._client_lock:
+            owner = self._control_session if self._connected_clients == 1 else None
+            packet_at = self._last_realtime_packet
+        if owner != self._operator_heartbeat_owner:
+            self._operator_heartbeat_owner = owner
+            self._operator_heartbeat_owner_since = now
+            return
+        status, _, fresh = self._teleop_status_snapshot()
+        age = None if not isinstance(status, dict) else status.get('vr_age')
+        if (not owner or packet_at <= self._operator_heartbeat_owner_since or
+                not 0 <= now - packet_at <= 0.25 or not fresh or
+                not isinstance(age, (int, float)) or not 0 <= age <= 0.25 or
+                status.get('vr_input_fresh') is not True):
+            return
+        message = String()
+        message.data = self._operator_heartbeat_id
+        self._operator_heartbeat_pub.publish(message)
 
     def _on_navigation_status(self, message):
         status = self._status_payload(message)
@@ -677,7 +785,7 @@ class NavigationVrWebBridge(VrWebBridge):
                     self._task_workflow.height_failed(transit_error)
                 elif self._task_height_target_m is None:
                     # Recheck feedback at arrival, without restarting adjustment in flight.
-                    self._set_task_height(task['body_lowering_cm'], task.get('head_pitch_deg', 30),
+                    self._set_task_height(task['body_lowering_cm'], task['head_pitch_deg'],
                                           reverse_squat=task.get('reverse_squat', False))
         elif outcome == 'failed':
             current = self._task_workflow.current()
@@ -809,7 +917,8 @@ class NavigationVrWebBridge(VrWebBridge):
                     return False
                 angle = effective
             pitch = float(backend['measured_neck_deg'][1])
-            return math.isfinite(pitch) and abs(pitch + angle) <= 1.0
+            # S3 encoder pitch is positive downward, matching the task preset.
+            return math.isfinite(pitch) and abs(pitch - angle) <= 1.0
         except (KeyError, IndexError, TypeError, ValueError):
             return False
 
@@ -820,6 +929,7 @@ class NavigationVrWebBridge(VrWebBridge):
         if reverse_squat:
             target = -target
         angle = None if head_angle is None else head_pitch_deg(head_angle)
+        self.get_logger().info(f'pose preset request: lowering_cm={abs(target)*100:.1f}, head_down_deg={angle}, manual={manual}')
         with self._task_height_lock:
             snapshot = self._task_workflow.snapshot()
             if (self._exit_in_progress or (not manual
@@ -1081,7 +1191,7 @@ class NavigationVrWebBridge(VrWebBridge):
         state = str(payload.get('state', '')).strip().lower()
         if state in {'failed', 'failure', 'aborted', 'rejected'}:
             self._task_workflow.manual_relocalization_required(
-                '自动重定位失败，请在导航界面进行手动重定位后再次确认任务'
+                '自动重定位失败，请在导航界面进行手动重定位后在菜单重试启动'
             )
 
     @staticmethod
@@ -1157,20 +1267,97 @@ class NavigationVrWebBridge(VrWebBridge):
             'canceled', 'cancelled', 'sequence_succeeded', 'map_ready',
         }
 
+    def _manual_squat_status(self):
+        status, _age, fresh = self._teleop_status_snapshot()
+        backend = status.get('backend', status) if isinstance(status, dict) else {}
+        result = dict(backend.get('manual_squat', {})) if isinstance(backend, dict) else {}
+        try:
+            age = time.monotonic()-float(result['feedback_time_monotonic'])
+            valid = fresh and 0 <= age <= .5
+        except (KeyError, TypeError, ValueError):
+            valid = False
+        if not valid:
+            result.update(mode=None, can_switch=False, message='等待新鲜腰腿反馈；请确认 V5 已更新')
+        result['automatic_height_active'] = getattr(self, '_task_height_target_m', None) is not None
+        if result['automatic_height_active']:
+            result.update(can_switch=False, message='请等待自动身体高度调整结束')
+        return result
+
+    async def _api_manual_squat_mode(self, request):
+        request_id = None
+        try:
+            payload = await self._operator_payload(request)
+            mode = payload.get('mode')
+            if mode not in ('normal', 'reverse'):
+                raise ValueError('请选择正向或反向下蹲')
+            now = time.monotonic()
+            with self._drive_lock:
+                sample = dict(self._drive_sample or {})
+                paused_since = getattr(self, '_drive_menu_paused_since', None)
+                if (not sample.get('deadman') or not sample.get('pause_for_menu')
+                        or now-self._drive_time > .3 or paused_since is None
+                        or now-paused_since < .35):
+                    raise RuntimeError('请在底盘接管的下蹲方式菜单中操作，并等待底盘停止')
+            status = self._manual_squat_status()
+            if not status.get('can_switch'):
+                raise RuntimeError(status.get('message', '暂不能切换'))
+            with self._task_height_lock:
+                if self._task_height_target_m is not None:
+                    raise RuntimeError('请先结束当前自动身体高度调整')
+                if time.monotonic() < getattr(self, '_squat_mode_pending_until', 0.0):
+                    raise RuntimeError('正在切换下蹲方式，请等待确认')
+                request_id = 'squat-'+str(time.time_ns())
+                self._squat_mode_pending_request = request_id
+                self._squat_mode_pending_until = time.monotonic()+1.8
+            self._body_height_publisher.publish(String(data=json.dumps({
+                'select_squat_mode': mode, 'request_id': request_id,
+                'expires_monotonic': time.monotonic()+1.0,
+                'enabled': False, 'direction': 0,
+            })))
+            deadline = time.monotonic()+1.8
+            while time.monotonic() < deadline:
+                result = self._manual_squat_status()
+                ack = result.get('ack', {})
+                if ack.get('request_id') == request_id:
+                    if not ack.get('accepted'):
+                        raise RuntimeError(ack.get('message', '控制器未接受切换'))
+                    if result.get('mode') != mode:
+                        raise RuntimeError('当前腰腿反馈尚未确认所选方式，请查看当前模式后重试')
+                    return web.json_response({'success': True, 'message': ack['message'], 'manual_squat': result})
+                await asyncio.sleep(.04)
+            raise RuntimeError('未收到控制器确认，请查看当前模式后重试')
+        except (TypeError, ValueError, RuntimeError) as error:
+            return web.json_response({'success': False, 'message': str(error)}, status=409)
+        finally:
+            if request_id is not None:
+                with self._task_height_lock:
+                    if getattr(self, '_squat_mode_pending_request', None) == request_id:
+                        self._squat_mode_pending_until = 0.0
+                        self._squat_mode_pending_request = None
+
     def _set_drive_sample(self, payload):
         if self._exit_in_progress:
             return
         deadman = bool(payload.get('deadman', False))
         if getattr(self, '_task_intervention', False):
             deadman = False
+        pause_for_menu = bool(deadman and payload.get('pause_for_menu') is True)
         sample = {
             'deadman': deadman,
+            'pause_for_menu': pause_for_menu,
             'forward': shaped_axis(payload.get('forward', 0.0)),
             'lateral': shaped_axis(payload.get('lateral', 0.0)),
             'turn': shaped_axis(payload.get('turn', 0.0)),
         }
+        if pause_for_menu:
+            sample.update(forward=0.0, lateral=0.0, turn=0.0)
         now = time.monotonic()
         with self._drive_lock:
+            if pause_for_menu:
+                if getattr(self, '_drive_menu_paused_since', None) is None:
+                    self._drive_menu_paused_since = now
+            else:
+                self._drive_menu_paused_since = None
             was_deadman = bool(self._drive_sample and self._drive_sample.get('deadman'))
             self._drive_sample = sample
             self._drive_time = now
@@ -1183,7 +1370,9 @@ class NavigationVrWebBridge(VrWebBridge):
                 )
                 self._drive_settle_until = now + max(0.0, settle)
                 self._pause_requested_for_drive = False
-        height_enabled = bool(deadman and payload.get('body_height_enabled', False))
+        if pause_for_menu:
+            self._publish_stop()
+        height_enabled = bool(deadman and not pause_for_menu and payload.get('body_height_enabled', False))
         try:
             height_direction = float(payload.get('body_height_direction', 0.0))
         except (TypeError, ValueError):
@@ -1203,69 +1392,40 @@ class NavigationVrWebBridge(VrWebBridge):
             with self._task_height_lock:
                 if self._task_height_target_m is not None:
                     return
+                # Keep-last ROS transport must not overwrite the one-shot
+                # mode request with the menu's repetitive release heartbeat.
+                if time.monotonic() < getattr(self, '_squat_mode_pending_until', 0.0):
+                    return
             self._body_height_publisher.publish(String(data=json.dumps({
                 'enabled': height_enabled,
                 'direction': height_direction,
             }, separators=(',', ':'))))
 
-    @staticmethod
-    def _gripper_vendor_force(ratio):
-        # The vendor interface normally accepts the full 0..10 A range
-        # (the published normalized value is multiplied by 10 A).  Hardware
-        # testing showed little useful feel difference once the cap reaches
-        # roughly 0.4 A for the current scenarios, so expose only four fixed
-        # levels: off, low, standard, and the original 10 A high ceiling.
-        return {
-            0.0: 0.0,
-            0.25: 0.025,
-            0.35: 0.035,
-            1.0: 1.0,
-        }[ratio]
-
     def _set_gripper_force_ratio(self, payload):
-        ratio = float(payload.get('ratio'))
-        minimum = float(self.get_parameter('gripper_force_minimum_ratio').value)
-        if not math.isfinite(ratio) or ratio < minimum or ratio > 1.0:
-            raise ValueError(f'gripper force ratio must be within [{minimum}, 1.0]')
-        ratio = round(ratio, 2)
-        if ratio not in (0.0, 0.25, 0.35, 1.0):
-            raise ValueError('gripper force must be one of: 0%, low, standard, high')
-        if (
-            self._left_gripper_force_publisher.get_subscription_count() < 1
-            or self._right_gripper_force_publisher.get_subscription_count() < 1
-        ):
-            raise RuntimeError('厂商夹爪力度接口未连接，设置未发送')
-        # The vendor callback expects the key ``force``.  It multiplies this
-        # normalized value by the configured 10 A gripper-current ceiling.
-        # The old ``ratio`` key was silently replaced by the vendor default
-        # 0.5, which made every menu setting apply the same 5 A limit.
-        vendor_force = self._gripper_vendor_force(ratio)
-        message = String(data=json.dumps({'force': vendor_force}, separators=(',', ':')))
-        self._left_gripper_force_publisher.publish(message)
-        self._right_gripper_force_publisher.publish(message)
-        self._gripper_force_ratio = ratio
-        return ratio
+        raise ValueError('345 DM夹爪保留原厂2.0力矩上限，旧S2电流档位接口已停用')
 
-    async def _api_gripper_width(self, request):
+    async def _api_gripper_position(self, request):
         try:
-            width = checked_width((await request.json()).get('width_cm'))
+            width = checked_closure((await request.json()).get('closed_percent'))
             if not self._gripper_width_client.service_is_ready():
-                raise RuntimeError('夹爪映射服务未就绪，宽度未更改')
+                raise RuntimeError('夹爪行程设置服务未就绪，设置未更改')
             command = SetParametersAtomically.Request(parameters=[
-                Parameter('gripper_closed_width_cm', value=width).to_parameter_msg(),
+                Parameter('gripper_closed_percent', value=width).to_parameter_msg(),
             ])
             response = await self._await_service_response(self._gripper_width_client, command, 3.0)
             if not response.result.successful:
                 raise RuntimeError(response.result.reason)
-            return web.json_response({'success': True, 'width_cm': width})
+            return web.json_response({'success': True, 'closed_percent': width})
         except (ValueError, TypeError, RuntimeError, TimeoutError, OSError) as error:
             return web.json_response({'success': False, 'message': str(error)}, status=400)
 
     async def _api_gripper_force(self, request):
         # Old cached pages must not silently keep changing motor current.
-        return web.json_response({'success': False, 'message': '菜单已改为闭合宽度，请刷新VR页面'}, status=410)
+        return web.json_response({'success': False, 'message': '345 DM夹爪使用原厂力矩控制，旧力度接口已停用，请刷新VR页面'}, status=410)
 
     def _publish_stop(self):
+        if hasattr(self, '_drive_ramp'):
+            self._drive_ramp.reset()
         self._drive_current = [0.0, 0.0, 0.0]
         self._drive_publisher.publish(Twist())
 
@@ -1370,7 +1530,6 @@ class NavigationVrWebBridge(VrWebBridge):
             self._drive_was_active = False
             return
         now = time.monotonic()
-        dt = max(0.001, min(0.05, now - self._last_drive_tick))
         self._last_drive_tick = now
         with self._drive_lock:
             sample = dict(self._drive_sample) if self._drive_sample else None
@@ -1398,6 +1557,10 @@ class NavigationVrWebBridge(VrWebBridge):
         # Claim arbitration before publishing the first non-zero velocity.
         self._publish_manual_override(True)
         self._pause_for_drive()
+        if sample.get('pause_for_menu'):
+            self._publish_stop()
+            self._drive_was_active = True
+            return
         if self._navigation_is_active() and not self._navigation_paused_for_drive:
             self._publish_stop()
             self._drive_was_active = True
@@ -1415,11 +1578,8 @@ class NavigationVrWebBridge(VrWebBridge):
             sample['lateral'] * float(self.get_parameter('maximum_lateral_speed').value),
             sample['turn'] * float(self.get_parameter('maximum_yaw_speed').value),
         ]
-        linear_step = float(self.get_parameter('linear_acceleration').value) * dt
-        yaw_step = float(self.get_parameter('yaw_acceleration').value) * dt
-        self._drive_current[0] = self._approach(self._drive_current[0], target[0], linear_step)
-        self._drive_current[1] = self._approach(self._drive_current[1], target[1], linear_step)
-        self._drive_current[2] = self._approach(self._drive_current[2], target[2], yaw_step)
+        self._drive_ramp.set_target(*target)
+        self._drive_current = list(self._drive_ramp.step(now))
         command = Twist()
         command.linear.x, command.linear.y, command.angular.z = self._drive_current
         self._drive_publisher.publish(command)
@@ -1945,10 +2105,11 @@ class NavigationVrWebBridge(VrWebBridge):
         measured = self._task_measured_lowering(status, fresh)
         backend = status.get('backend') or {}
         try:
-            pitch = -float(backend['measured_neck_deg'][1])
+            pitch = float(backend['measured_neck_deg'][1])
             pitch = round(pitch, 1) if measured is not None and math.isfinite(pitch) else None
         except (KeyError, IndexError, TypeError, ValueError):
             pitch = None
+        payload['manual_squat'] = self._manual_squat_status()
         payload['body_pose'] = {
             'lowering_cm': None if measured is None else round(measured * 100, 1),
             'head_pitch_deg': pitch,
@@ -1981,11 +2142,7 @@ class NavigationVrWebBridge(VrWebBridge):
         self._speak_task(task_voice_text(
             'departure', task, self._showroom_single_task_active
         ))
-        request_message = NavigateToWaypoint.Request()
-        request_message.name = task['location']
-        success, message = await self._call_service(
-            self._navigate_waypoint_client, request_message
-        )
+        success, message = await self._request_waypoint_navigation(task['location'])
         if not success:
             with self._nav_lock:
                 pose_age = (
@@ -2000,9 +2157,9 @@ class NavigationVrWebBridge(VrWebBridge):
                     'failed', 'failure', 'aborted', 'rejected'
                 }
                 retry_message = (
-                    '自动重定位失败，请在导航界面进行手动重定位后再次确认任务'
+                    '自动重定位失败，请在导航界面进行手动重定位后在菜单重试启动'
                     if manual_required
-                    else '机器人定位尚未就绪，请等待自动重定位完成后再次确认任务'
+                    else '机器人定位尚未就绪，请等待定位就绪后在菜单重试启动'
                 )
                 self._task_workflow.manual_relocalization_required(retry_message)
             else:
@@ -2011,53 +2168,28 @@ class NavigationVrWebBridge(VrWebBridge):
         snapshot = self._task_workflow.snapshot()
         if (not self._exit_in_progress and snapshot['task_token'] == task_token
                 and snapshot['state'] == 'navigating'):
-            self._set_task_height(task['body_lowering_cm'], task.get('head_pitch_deg', 30),
+            self._set_task_height(task['body_lowering_cm'], task['head_pitch_deg'],
                                   reverse_squat=task.get('reverse_squat', False))
         return message
 
     async def _api_tasks_submit(self, request):
-        try:
-            payload = await request.json()
-            state = str(self._task_workflow.snapshot().get('state', 'idle'))
-            replace_existing = bool(payload.get('replace_existing', False))
-            active_states = {
-                'preparing', 'navigating', 'navigation_failed',
-                'adjusting_height', 'awaiting_action'
-            }
-            if replace_existing and state in active_states:
-                # New speech supersedes the old mission. Stop the active goal
-                # first so the robot cannot continue toward an obsolete task
-                # while every UI switches to the new version atomically.
-                if (
-                    self._navigation_is_active()
-                    and self._pause_navigation_client.service_is_ready()
-                ):
-                    await self._call_service(
-                        self._pause_navigation_client, Trigger.Request()
-                    )
-                self._task_workflow.cancel()
-            if state not in active_states or replace_existing:
-                self._reload_task_catalog_if_changed()
-            snapshot = self._task_workflow.submit(
-                payload.get('source_text', ''), payload.get('tasks', [])
-            )
-            self._showroom_single_task_active = False
-            return web.json_response({'success': True, 'task_dispatch': snapshot})
-        except RuntimeError as error:
-            return web.json_response({'success': False, 'message': str(error)}, status=409)
-        except (TypeError, ValueError) as error:
-            return web.json_response({'success': False, 'message': str(error)}, status=422)
+        return web.json_response({'success': False,
+            'message': '任务分发已停用，请在VR菜单直接选择任务流程'}, status=410)
 
     async def _replace_active_task(self):
-        state = str(self._task_workflow.snapshot().get('state', 'idle'))
-        if state not in {
-            'preparing', 'navigating', 'navigation_failed',
-            'adjusting_height', 'awaiting_action'
-        }:
+        state = self._task_workflow.snapshot()['state']
+        if state in {'idle', 'completed', 'cancelled'}:
             return
-        if self._navigation_is_active() and self._pause_navigation_client.service_is_ready():
-            await self._call_service(self._pause_navigation_client, Trigger.Request())
-        self._task_workflow.cancel('已由新的本地任务流程替换')
+        if self._navigation_is_active():
+            if not self._pause_navigation_client.service_is_ready():
+                raise RuntimeError('当前导航无法停止，请先停止后再切换')
+            success, message = await self._call_service(self._pause_navigation_client, Trigger.Request())
+            if not success:
+                raise RuntimeError(message or '当前导航尚未停止')
+        with self._task_height_lock:
+            NavigationVrWebBridge._clear_task_pose_locked(self)
+        self._task_workflow.cancel('已切换到新的导航或任务流程')
+        self._showroom_single_task_active = False
 
     async def _api_task_menu_catalog(self, request):
         try:
@@ -2156,6 +2288,7 @@ class NavigationVrWebBridge(VrWebBridge):
 
     async def _api_tasks_template_start(self, request):
         try:
+            await self._replace_active_task()
             self._refresh_idle_task_catalog()
             if self._task_catalog_error: raise ValueError(self._task_catalog_error)
             payload = await request.json()
@@ -2168,7 +2301,6 @@ class NavigationVrWebBridge(VrWebBridge):
             tasks = list(template['tasks'])
             start_index = self._template_start_index(payload, len(tasks))
             selected_tasks = tasks[start_index:]
-            await self._replace_active_task()
             self._task_workflow.submit(
                 f"VR预设流程：{template['name']}", selected_tasks
             )
@@ -2186,31 +2318,8 @@ class NavigationVrWebBridge(VrWebBridge):
             return web.json_response({'success': False, 'message': str(error)}, status=409)
 
     async def _api_showroom_waypoint_start(self, request):
-        try:
-            if not self._showroom_mode_enabled:
-                raise RuntimeError('展厅模式未开启')
-            payload = await request.json()
-            name = str(payload.get('name', '')).strip()
-            with self._nav_lock:
-                known = name in self._waypoints
-            if not name or not known:
-                raise ValueError('请选择有效航点')
-            await self._replace_active_task()
-            self._task_workflow.submit(
-                f"展厅模式单点任务：{name}",
-                [{
-                    'location': name,
-                    'task': self._showroom_waypoint_task,
-                    'body_lowering_cm': 0.0, 'automatic': False,
-                }],
-                allow_unlisted=True,
-            )
-            self._showroom_single_task_active = True
-            return await self._api_tasks_confirm(None)
-        except ValueError as error:
-            return web.json_response({'success': False, 'message': str(error)}, status=422)
-        except RuntimeError as error:
-            return web.json_response({'success': False, 'message': str(error)}, status=409)
+        # Compatibility for old cached pages: a waypoint never creates a task.
+        return await self._api_navigation_waypoint(request)
 
     async def _api_showroom_mode(self, request):
         try:
@@ -2240,9 +2349,9 @@ class NavigationVrWebBridge(VrWebBridge):
             }
             if not pose_available or manual_required:
                 message = (
-                    '自动重定位失败，请在导航界面进行手动重定位后再次确认任务'
+                    '自动重定位失败，请在导航界面进行手动重定位后在菜单重试启动'
                     if manual_required
-                    else '机器人定位尚未就绪，请等待自动重定位完成后再次确认任务'
+                    else '机器人定位尚未就绪，请等待定位就绪后在菜单重试启动'
                 )
                 self._task_workflow.manual_relocalization_required(message)
                 return web.json_response({
@@ -2349,7 +2458,7 @@ class NavigationVrWebBridge(VrWebBridge):
                 raise RuntimeError('已有位置调整正在进行，请等待完成或停止后再重试')
             current = self._task_workflow.retry_height_failure(payload['task_token'])
             self._task_transit_pose_error = ''
-            self._set_task_height(current['body_lowering_cm'], current.get('head_pitch_deg', 30),
+            self._set_task_height(current['body_lowering_cm'], current['head_pitch_deg'],
                                   reverse_squat=current.get('reverse_squat', False))
             self.get_logger().info(f'task pose retry: task={payload["task_token"]}')
             return web.json_response({'success': True, 'message': '正在重试当前任务姿态，后续流程保留',
@@ -2464,19 +2573,38 @@ class NavigationVrWebBridge(VrWebBridge):
             headers={'Cache-Control': 'no-store', 'X-Map-Version': str(version)},
         )
 
+    async def _request_waypoint_navigation(self, name):
+        """Shared by single points and task chains; never bypass the VR watchdog."""
+        with self._nav_lock:
+            if not name or name not in self._waypoints:
+                return False, '请选择有效航点'
+        with self._client_lock:
+            owner = self._control_session if self._connected_clients == 1 else None
+        if not owner:
+            return False, '请先连接 VR 控制会话'
+        success, message = await self._call_service(self._vr_navigation_rearm_client, Trigger.Request())
+        if not success:
+            return False, message
+        await asyncio.sleep(0.25)
+        with self._client_lock:
+            if self._connected_clients != 1 or self._control_session != owner:
+                return False, 'VR 控制会话已改变，请重新选择航点'
+        request_message = NavigateToWaypoint.Request()
+        request_message.name = name
+        return await self._call_service(self._navigate_waypoint_client, request_message)
+
     async def _api_navigation_waypoint(self, request):
         payload = await request.json()
         name = str(payload.get('name', '')).strip()
         with self._nav_lock:
-            known = name in self._waypoints
-        if not name or not known:
-            raise web.HTTPBadRequest(text='请选择有效航点')
-        request_message = NavigateToWaypoint.Request()
-        request_message.name = name
-        success, message = await self._call_service(
-            self._navigate_waypoint_client, request_message
-        )
-        return web.json_response({'success': success, 'message': message}, status=200 if success else 503)
+            if not name or name not in self._waypoints:
+                raise web.HTTPBadRequest(text='请选择有效航点')
+        try:
+            await self._replace_active_task()
+            success, message = await self._request_waypoint_navigation(name)
+            return web.json_response({'success': success, 'message': message}, status=200 if success else 503)
+        except RuntimeError as error:
+            return web.json_response({'success': False, 'message': str(error)}, status=409)
 
     def _next_vr_waypoint_name(self):
         with self._nav_lock:
@@ -2960,15 +3088,49 @@ class NavigationVrWebBridge(VrWebBridge):
             'delivery_handoff': self._delivery_handoff.snapshot(),
         }, status=200 if success else 409)
 
+    async def _api_teaching_status(self, request):
+        from .teaching_ipc import request as recorder_request
+        robot_id=str(self.get_parameter('teaching_topic_suffix').value).split('_')[-1]
+        try:
+            result=await asyncio.to_thread(recorder_request,robot_id,'/status',None,.6)
+            return web.json_response(result,headers={'Cache-Control':'no-store'})
+        except (OSError,ValueError,KeyError) as exc:
+            return web.json_response(dict(success=True,available=False,enabled=False,
+                message='请在抓取与任务流程中打开遥操动作编排器'),headers={'Cache-Control':'no-store'})
+
+    async def _api_teaching_command(self, request):
+        from .teaching_ipc import request as recorder_request
+        from urllib.parse import urlsplit
+        origin=request.headers.get('Origin')
+        if origin and urlsplit(origin).netloc!=request.host:
+            return web.json_response(dict(success=False,message='示教请求来源不匹配'),status=403)
+        try:
+            body=await request.json()
+            if not isinstance(body,dict):raise ValueError('示教请求格式无效')
+            if body.get('op') not in ('heartbeat','new','mode','capture','toggle_record','start','stop','finish'):
+                raise ValueError('请在机器人动作编排器开启示教')
+            robot_id=str(self.get_parameter('teaching_topic_suffix').value).split('_')[-1]
+            result=await asyncio.to_thread(recorder_request,robot_id,'/command',body,1.5)
+            return web.json_response(result)
+        except (OSError,ValueError,KeyError,TypeError) as exc:
+            return web.json_response(dict(success=False,message=str(exc)),status=409)
+
     async def _serve(self):
         application = web.Application(client_max_size=64 * 1024)
         application.router.add_get('/api/config', self._api_config)
+        application.router.add_get('/api/fisheye-front/status', self._fisheye_front_endpoint.status)
+        application.router.add_get('/ws/fisheye-front', self._fisheye_front_endpoint.websocket)
+        application.router.add_get('/api/fisheye-rear/status', self._fisheye_rear_endpoint.status)
+        application.router.add_get('/ws/fisheye-rear', self._fisheye_rear_endpoint.websocket)
         application.router.add_get('/api/status', self._api_status)
+        application.router.add_get('/api/teaching/status', self._api_teaching_status)
+        application.router.add_post('/api/teaching/command', self._api_teaching_command)
         application.router.add_get('/api/camera/status', self._api_camera_status)
         application.router.add_post('/api/camera/client-status', self._api_camera_client_status)
         application.router.add_get('/api/camera/stream.mjpg', self._api_camera_stream)
         application.router.add_get('/api/camera/frame.jpg', self._api_camera_frame)
         application.router.add_post('/api/hardware-control', self._api_hardware_control)
+        application.router.add_post('/api/calibrate-reach', self._api_calibrate_reach)
         application.router.add_post('/api/waist-follow', self._api_waist_follow)
         application.router.add_post('/api/head-follow', self._api_head_follow)
         application.router.add_post('/api/desktop-mode', self._api_desktop_mode)
@@ -2986,7 +3148,8 @@ class NavigationVrWebBridge(VrWebBridge):
         application.router.add_get('/api/navigation/state', self._api_navigation_state)
         application.router.add_get('/api/navigation/map.png', self._api_navigation_map)
         application.router.add_post('/api/gripper/force', self._api_gripper_force)
-        application.router.add_post('/api/gripper/width', self._api_gripper_width)
+        application.router.add_post('/api/gripper/position', self._api_gripper_position)
+        application.router.add_post('/api/gripper/width', self._api_gripper_force)
         application.router.add_post(
             '/api/delivery-handoff/open', self._api_delivery_handoff_open
         )
@@ -3032,6 +3195,7 @@ class NavigationVrWebBridge(VrWebBridge):
         application.router.add_post('/api/tasks/submit', self._api_tasks_submit)
         application.router.add_get('/api/tasks/menu-catalog', self._api_task_menu_catalog)
         application.router.add_post('/api/tasks/custom/start', self._api_custom_task_start)
+        application.router.add_post('/api/body-height/mode', self._api_manual_squat_mode)
         application.router.add_post('/api/pose/preset', self._api_pose_preset)
         application.router.add_post('/api/pose/stop', self._api_pose_stop)
         application.router.add_post('/api/navigation/voice-enabled', self._api_voice_enabled)
@@ -3044,6 +3208,7 @@ class NavigationVrWebBridge(VrWebBridge):
         application.router.add_post(
             '/api/navigation/showroom-mode', self._api_showroom_mode
         )
+        application.router.add_post('/api/tasks/start', self._api_tasks_confirm)
         application.router.add_post('/api/tasks/confirm', self._api_tasks_confirm)
         application.router.add_post('/api/tasks/complete', self._api_tasks_complete)
         application.router.add_post('/api/tasks/retry-pose', self._api_tasks_retry_pose)
@@ -3080,6 +3245,8 @@ class NavigationVrWebBridge(VrWebBridge):
                 self._publish_stop()
             await self._close_camera_webrtc_peer()
             await self._close_webrtc_peer()
+            await self._fisheye_front_endpoint.close()
+            await self._fisheye_rear_endpoint.close()
             await runner.cleanup()
 
     def destroy_node(self):
@@ -3087,6 +3254,8 @@ class NavigationVrWebBridge(VrWebBridge):
         if rclpy.ok():
             self._publish_stop()
         self._delivery_handoff.stop()
+        self._fisheye_front.close()
+        self._fisheye_rear.close()
         if self._precision_cloud_stream is not None:
             self._precision_cloud_stream.close()
         return super().destroy_node()

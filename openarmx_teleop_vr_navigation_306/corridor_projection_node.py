@@ -23,19 +23,18 @@ from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import String
 
-from openarmx_teleop_vr_306_v4.kinematics import (
+from openarmx_teleop_vr_306_v5.kinematics import (
     LEFT_ARM_JOINTS,
     LEG_WAIST_JOINTS,
     NECK_JOINTS,
     RIGHT_ARM_JOINTS,
 )
-from openarmx_teleop_vr_306_v4.schema import parse_joint_feedback
+from openarmx_teleop_vr_306_v5.schema import parse_joint_feedback
 
 
-DEFAULT_URDF = (
-    '/home/ubuntu/miniconda3/envs/robot_env/lib/python3.12/site-packages/'
-    'autolife_robot_sdk/descriptions/autolife_s1/urdfs/robot_v2_2.urdf'
-)
+from ament_index_python.packages import get_package_share_directory
+
+DEFAULT_URDF = os.path.join(get_package_share_directory('control_center_joint_control'), 'urdf', 'robot_v3_1.urdf')
 
 # The forehead link uses z-forward, y-right and x-up.  Columns below express
 # optical x-right, y-down, z-forward in that link frame.
@@ -201,7 +200,7 @@ def directional_obstacle_clearances(
 class CorridorProjectionNode(Node):
     def __init__(self):
         super().__init__('vr_corridor_projection_306')
-        self.declare_parameter('topic_suffix', '0_300')
+        self.declare_parameter('topic_suffix', '0_345')
         self.declare_parameter('output_topic', '/vr_navigation/corridor_projection')
         self.declare_parameter('manual_cmd_vel_topic', '/manual_cmd_vel')
         self.declare_parameter('navigation_cmd_vel_topic', '/nav_cmd_vel')
@@ -218,8 +217,8 @@ class CorridorProjectionNode(Node):
         self.declare_parameter('depth_stale_seconds', 0.25)
         self.declare_parameter('joint_stale_seconds', 0.40)
         self.declare_parameter('obstacle_clearance_m', 0.16)
-        self.declare_parameter('front_laser_topic', '/topic_gv_front_lidar_0_300')
-        self.declare_parameter('rear_laser_topic', '/topic_gv_rear_lidar_0_300')
+        self.declare_parameter('front_laser_topic', '/topic_gv_front_lidar_0_345')
+        self.declare_parameter('rear_laser_topic', '/topic_gv_rear_lidar_0_345')
         self.declare_parameter('laser_stale_seconds', 0.40)
         self.declare_parameter('laser_maximum_range_m', 1.50)
         self.declare_parameter('obstacle_update_rate_hz', 12.5)
@@ -299,7 +298,7 @@ class CorridorProjectionNode(Node):
             latest_qos,
         )
         for source, topic, offset, cosine_sign, sine_sign in (
-            ('front', str(self.get_parameter('front_laser_topic').value), 0.215, -1.0, 1.0),
+            ('front', str(self.get_parameter('front_laser_topic').value), 0.2634, 1.0, 1.0),
             ('rear', str(self.get_parameter('rear_laser_topic').value), -0.215, 1.0, -1.0),
         ):
             self.create_subscription(
@@ -635,3 +634,4 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+

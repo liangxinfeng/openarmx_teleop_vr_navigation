@@ -299,7 +299,7 @@ function drawTaskDispatch() {
   const dispatch = monitor.navigation?.task_dispatch;
   if (!dispatch || ['idle', 'cancelled', 'completed'].includes(dispatch.state)) return;
   const current = dispatch.current;
-  const pending = dispatch.state === 'pending_confirmation';
+  const pending = ['ready_to_start', 'waiting_localization'].includes(dispatch.state);
   const awaiting = dispatch.state === 'awaiting_action';
   const adjusting = dispatch.state === 'adjusting_height';
   const completed = dispatch.state === 'completed';
@@ -310,7 +310,7 @@ function drawTaskDispatch() {
       : (failed ? 'rgba(92,22,30,0.94)' : 'rgba(4,28,39,0.94)'));
   context.fillStyle = pending ? '#ffd276' : (failed ? '#ff91a7' : '#72f0b1');
   context.font = 'bold 22px sans-serif';
-  const title = pending ? '任务分发确认' : (completed ? '任务串已完成'
+  const title = pending ? '流程暂未启动' : (completed ? '任务串已完成'
     : `任务 ${Math.max(1, Number(dispatch.current_index) + 1)} / ${dispatch.total}`);
   context.fillText(title, 442, 106);
   if (current) {
@@ -322,7 +322,7 @@ function drawTaskDispatch() {
   }
   context.fillStyle = pending ? '#ffd276' : '#9edbea';
   context.font = 'bold 16px sans-serif';
-  const instruction = pending ? `收到 ${dispatch.total} 项任务 · A接受 · 长按X退出`
+  const instruction = pending ? '定位就绪后：菜单重试启动 · X退出'
     : (awaiting ? '长按A完成动作 · 长按X退出任务'
       : (navigationFailed ? '未到达 · 长按A重试 · 长按B跳过 · 长按X退出'
         : (completed ? '任务流程已完成'

@@ -2,11 +2,12 @@
 const vrCustom = {
   mode:'', catalog:{tasks:[],token:''}, draft:[], editIndex:0, libraryIndex:0,
   busy:false, inputField:'height', height:'0', head:'30', replaceDigit:true,
-  title(){return this.mode==='pose'?'头部与身体位置':'自定义任务流程';},
+  title(){return this.mode==='teaching'?'遥操示教与轨迹录制':this.mode==='pose'?'头部与身体位置':'自定义任务流程';},
   taskLabel(id){const t=this.catalog.tasks.find(t=>t.id===id);return t?`${t.location} · ${t.task}`:'任务已删除，请移除';},
   items(){
     const row=(kind,label,extra={})=>({kind,label,...extra});
     if(!this.mode)return null;
+    if(this.mode==='teaching')return autolifeTeaching.items();
     if(this.mode==='pose')return [
       row('pose-field',`身体下降 ${this.height} cm`,{field:'height'}),
       row('pose-field',`头部俯视 ${this.head}°`,{field:'head'}),
@@ -30,6 +31,9 @@ const vrCustom = {
   move(dx,dy){
     if(this.busy)return;
     const items=this.items()||[],current=items[navUi.selected];if(!current)return;
+    if(this.mode==='teaching'){
+      navUi.selected=Math.max(0,Math.min(items.length-1,navUi.selected+(dy||dx)));drawNavigationPanel();return;
+    }
     if(this.mode==='pose'){
       const cells=this.poseCells(),c=cells[navUi.selected],cx=c.x+c.w/2,cy=c.y+c.h/2;
       const candidates=cells.map((p,i)=>{
@@ -77,6 +81,17 @@ const vrCustom = {
     this[this.inputField]=value;this.replaceDigit=false;
   },
   async activate(item){
+    if(item.kind.startsWith('teaching-')){
+      if(item.kind==='teaching-open'){this.mode='teaching';navUi.selected=0;}
+      else if(item.kind==='teaching-close')this.mode='';
+      else {
+        const op=item.kind.slice(9);
+        await autolifeTeaching.command(op==='toggle'?'toggle_record':op,
+          op==='mode'?{mode:autolifeTeaching.data.mode==='poses'?'trajectory':'poses'}:{});
+        if(!autolifeTeaching.data.enabled)this.mode='';
+      }
+      drawNavigationPanel();return true;
+    }
     if(!item.kind.startsWith('custom-')&&!item.kind.startsWith('pose-'))return false;
     if(this.busy)return true;
     const oldMode=this.mode;let focus=null;
@@ -142,7 +157,15 @@ const vrCustom = {
       if(marked){context.strokeStyle='#7ce9b8';context.lineWidth=2;context.strokeRect(x+1,y+1,w-2,h-2);}
     };
     const items=this.items()||[];
-    if(this.mode==='pose'){
+    if(this.mode==='teaching'){
+      roundRect(context,126,127,948,591,20,'rgba(4,18,27,0.97)');
+      text('遥操示教与轨迹录制',150,174,880,29);
+      text(autolifeTeaching.data.message||'请选择录制操作',150,212,880,20,'#80e7d0');
+      items.forEach((item,i)=>{box(150,238+i*57,880,48,i===navUi.selected);text(item.label,170,269+i*57,840,23);});
+      text('右摇杆选择 · A 确认 · X+A复位保持原功能',150,623,880,20,'#a6bac5');
+      text('单击右摇杆开菜单；双击记录；长按1秒开始/结束轨迹',150,661,880,19,'#a6bac5');
+      text('左摇杆接管底盘及两侧摇杆移动/转向均保留',150,695,880,19,'#a6bac5');
+    }else if(this.mode==='pose'){
       roundRect(context,216,145,758,551,20,'rgba(4,18,27,0.97)');text('直接输入位置',240,188,600,27);
       const p=navUi.state?.body_pose||{};
       text(`当前实测：下降 ${p.lowering_cm??'—'} cm  /  俯视 ${p.head_pitch_deg??'—'}°`,240,225,690,20,'#80e7d0');

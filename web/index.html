@@ -6,9 +6,14 @@
     <meta name="description" content="Autolife 306 VR arm teleoperation and navigation">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="vendor/aframe.min.js"></script>
-    <script src="vr_app.js?v=yundie-306-navigation-283-delivery-menu-v2026101303" defer></script>
-    <script src="vr_custom_controls.js?v=yundie-306-navigation-283-delivery-menu-v2026101303" defer></script>
-    <script src="nav_app.js?v=yundie-306-navigation-283-delivery-menu-v2026101303" defer></script>
+    <script src="teaching_input.js?v=20261103-jr-menu" defer></script>
+    <script src="vr_app.js?v=yundie-306-navigation-v2026110305" defer></script>
+    <script src="teaching_vr.js?v=20261030" defer></script>
+    <script src="vr_custom_controls.js?v=teaching-20261030" defer></script>
+    <script src="squat_mode.js?v=20261102-squat-drive" defer></script>
+
+    <script type="module" src="fisheye_pip.js?v=yundie-306-navigation-v2026111102-pip50"></script>
+    <script src="nav_app.js?v=yundie-306-navigation-v2026111102" defer></script>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="nav_styles.css">
   </head>
@@ -62,7 +67,7 @@
           桌面双臂模式：同时长按左右摇杆按键 1 秒切换。切换后先放稳头显和双手柄，提示就绪后松开并重新按腰键接管。
         </div>
         <div class="navigation-hint">
-          <strong>VR 导航：</strong>任意画面下单击左摇杆键均可接管/取消底盘；左摇杆控制前后/横移，右摇杆控制转向。接管后 X 降低身体、Y 升高身体。按 Y 打开导航，右摇杆键显示菜单；夹爪闭合宽度项用右摇杆左右调节。
+          <strong>VR 导航：</strong>任意画面下单击左摇杆键均可接管/取消底盘；左摇杆控制前后/横移，右摇杆控制转向。接管后 X 降低身体、Y 升高身体。<br><strong>正 / 反向下蹲：</strong>接管底盘后短按右摇杆，或从 VR 导航菜单进入“正 / 反向下蹲设置”。右摇杆上下选择，A 确认、B 返回；需先升回直立并停稳，切换本身不产生运动。<br>按 Y 打开导航，右摇杆键显示菜单；夹爪闭合宽度项用右摇杆左右调节。
         </div>
       </section>
       <button id="startVrButton" class="start-button" type="button">进入 VR 遥操</button>

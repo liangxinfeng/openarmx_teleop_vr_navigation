@@ -11,6 +11,7 @@ import argparse
 import fcntl
 import json
 import os
+import re
 from pathlib import Path
 import signal
 import socket
@@ -24,7 +25,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 gi.require_version("WebKit2", "4.1")
-from gi.repository import Gdk, GLib, Gtk, WebKit2  # noqa: E402
+from gi.repository import Gdk, Gio, GLib, Gtk, WebKit2  # noqa: E402
 
 
 LOGO_URL = "http://127.0.0.1:8088/"
@@ -41,6 +42,14 @@ class StartupError(RuntimeError):
     pass
 
 
+def stack_exit_message(return_code: int, log_path: Path) -> tuple[str, str]:
+    if return_code == 4:
+        return ("导航切换未完成", "请确认底盘停稳；如仍有其他导航，请关闭后重试。")
+    if return_code == 3:
+        return ("其他遥操正在运行", "请先关闭 V5 测试或其他遥操，再启动 VR 遥操导航。")
+    return ("VR 遥操导航已退出", f"退出码 {return_code}；日志：{log_path}")
+
+
 def command(arguments: list[str], *, timeout: float = 12.0) -> subprocess.CompletedProcess:
     return subprocess.run(
         arguments,
@@ -51,6 +60,101 @@ def command(arguments: list[str], *, timeout: float = 12.0) -> subprocess.Comple
         timeout=timeout,
         check=False,
     )
+
+
+def current_primary_display(query: str) -> tuple[str, str, str]:
+    """Extract the active output, native mode and current XRandR rotation."""
+    lines = query.splitlines()
+    for index, line in enumerate(lines):
+        match = re.match(r'^(\S+) connected(?: primary)? (\d+)x(\d+)\+\d+\+\d+(?: (normal|left|right|inverted))? \(', line)
+        if not match:
+            continue
+        output, _, _, rotation = match.groups()
+        for mode_line in lines[index + 1:]:
+            if mode_line and not mode_line[0].isspace():
+                break
+            active = re.match(r'^\s+(\d+x\d+)\s+.*\*', mode_line)
+            if active:
+                return output, active.group(1), rotation or 'normal'
+    raise StartupError('无法读取当前主屏幕分辨率和方向。')
+
+
+def _mutter_display_proxy():
+    return Gio.DBusProxy.new_for_bus_sync(
+        Gio.BusType.SESSION, Gio.DBusProxyFlags.NONE, None,
+        'org.gnome.Mutter.DisplayConfig', '/org/gnome/Mutter/DisplayConfig',
+        'org.gnome.Mutter.DisplayConfig', None,
+    )
+
+
+def _mutter_single_display_state(proxy):
+    serial, monitors, logical, _props = proxy.call_sync(
+        'GetCurrentState', None, Gio.DBusCallFlags.NONE, 5000, None
+    ).unpack()
+    # Do not rearrange a multi-display workstation or a mirrored display.
+    if len(logical) != 1 or len(logical[0][5]) != 1 or not logical[0][4]:
+        raise StartupError('竖屏自动调整仅支持单个活动屏幕；保持现有显示设置。')
+    x, y, scale, rotation, primary, outputs, _ = logical[0]
+    connector = outputs[0][0]
+    modes = {spec[0]: next((mode[0] for mode in mode_list
+                            if mode[-1].get('is-current')), None)
+             for spec, mode_list, _ in monitors}
+    mode = modes.get(connector)
+    if not mode:
+        raise StartupError('无法确认当前屏幕模式；保持现有显示设置。')
+    return serial, (x, y, scale, rotation, primary, connector, mode)
+
+
+def _mutter_apply(proxy, serial, state, method):
+    x, y, scale, rotation, primary, connector, mode = state
+    logical = [(x, y, scale, rotation, primary, [(connector, mode, {})])]
+    arguments = GLib.Variant('(uua(iiduba(ssa{sv}))a{sv})',
+                             (serial, method, logical, {}))
+    proxy.call_sync('ApplyMonitorsConfig', arguments, Gio.DBusCallFlags.NONE,
+                    5000, None)
+
+
+def set_robot_portrait() -> tuple | None:
+    if os.environ.get('XDG_SESSION_TYPE', '').lower() == 'wayland':
+        try:
+            proxy = _mutter_display_proxy()
+            serial, old = _mutter_single_display_state(proxy)
+            if old[3] in (1, 3):
+                return None
+            new = old[:3] + (3,) + old[4:]
+            _mutter_apply(proxy, serial, new, 0)  # validate without changes
+            _mutter_apply(proxy, serial, new, 1)  # temporary, not persistent
+            return ('mutter', old, new)
+        except Exception as error:
+            # A failed display change must not prevent teleop from starting.
+            print(f'Wayland portrait unavailable: {error}', flush=True)
+            return None
+    result = command(['xrandr', '--query'])
+    if result.returncode:
+        raise StartupError('读取屏幕配置失败：' + result.stdout.strip())
+    output, mode, rotation = current_primary_display(result.stdout)
+    # Retain the real panel resolution rather than forcing the S2 1024x768.
+    if rotation not in ('left', 'right'):
+        result = command(['xrandr', '--output', output, '--mode', mode, '--rotate', 'right'])
+        if result.returncode:
+            raise StartupError('竖屏切换失败：' + result.stdout.strip())
+    return output, mode, rotation
+
+
+def restore_robot_display(profile: tuple) -> None:
+    if profile and profile[0] == 'mutter':
+        try:
+            proxy = _mutter_display_proxy()
+            serial, current = _mutter_single_display_state(proxy)
+            # Do not overwrite a change made by the user while the UI was open.
+            if current == profile[2]:
+                _mutter_apply(proxy, serial, profile[1], 0)
+                _mutter_apply(proxy, serial, profile[1], 1)
+        except Exception as error:
+            print(f'Wayland display restore unavailable: {error}', flush=True)
+        return
+    output, mode, rotation = profile
+    command(['xrandr', '--output', output, '--mode', mode, '--rotate', rotation])
 
 
 def service_active() -> bool:
@@ -142,6 +246,7 @@ class VrNavigationDesktopApp:
         self.logo_service_stopped = False
         self.logo_service_restored = False
         self.display_changed = False
+        self.display_profile = None
         self.logo_process: subprocess.Popen | None = None
         self.stack_process: subprocess.Popen | None = None
         self.log_handle = None
@@ -277,10 +382,9 @@ class VrNavigationDesktopApp:
             if self.cancelled.is_set():
                 return
 
-            display = command([str(DISPLAY_SCRIPT), "portrait"], timeout=12.0)
-            if display.returncode != 0:
-                raise StartupError("竖屏切换失败：" + display.stdout.strip())
-            self.display_changed = True
+            if os.environ.get("AUTOLIFE_VR_KEEP_DISPLAY") != "1":
+                self.display_profile = set_robot_portrait()
+                self.display_changed = self.display_profile is not None
             if self.cancelled.is_set():
                 return
             if not port_available():
@@ -326,6 +430,7 @@ class VrNavigationDesktopApp:
             self.started_stack = True
             threading.Thread(target=self._watch_stack, daemon=True).start()
         except Exception as error:
+            print(f'VR345 desktop startup failed: {error}', flush=True)
             GLib.idle_add(
                 self._set_status, "启动失败", str(error) or error.__class__.__name__
             )
@@ -362,10 +467,11 @@ class VrNavigationDesktopApp:
         return_code = process.wait()
         if not self.shutdown_started:
             log_path = STATE_DIR / f"desktop-{self.robot_id}.log"
+            title, detail = stack_exit_message(return_code, log_path)
             GLib.idle_add(
                 self._set_status,
-                "VR 遥操导航已退出",
-                f"退出码 {return_code}；日志：{log_path}",
+                title,
+                detail,
             )
 
     def _on_window_state(self, _window, event) -> bool:
@@ -417,14 +523,14 @@ class VrNavigationDesktopApp:
             )
             self.logo_service_restored = restored.returncode == 0
         elif self.display_changed and not self.started_stack:
-            command([str(DISPLAY_SCRIPT), "landscape"], timeout=12.0)
+            restore_robot_display(self.display_profile)
 
     def _shutdown_worker(self) -> None:
         self.startup_done.wait(timeout=20.0)
         terminate_group(self.stack_process, graceful=25.0)
         terminate_group(self.logo_process)
         if self.display_changed and not self.logo_service_restored:
-            command([str(DISPLAY_SCRIPT), "landscape"], timeout=12.0)
+            restore_robot_display(self.display_profile)
         if self.log_handle is not None:
             self.log_handle.close()
         GLib.idle_add(Gtk.main_quit)

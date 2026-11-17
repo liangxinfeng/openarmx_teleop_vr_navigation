@@ -59,7 +59,7 @@ def test_navigation_continues_and_arrival_waits_until_explicit_head_lock(monkeyp
                                      'effective_deg':30.,'safe_max_deg':43.}
     # Fresh commanded goal alone must not mark real pose ready.
     tick(r,data,clock);assert w.snapshot()['state']=='adjusting_height'
-    data['backend']['measured_neck_deg'][1]=-30
+    data['backend']['measured_neck_deg'][1]=30
     tick(r,data,clock);tick(r,data,clock,.2)
     assert w.snapshot()['state']=='awaiting_action' and w.snapshot()['task_token']==token
     assert w.complete_action()[2]['location']=='two'
@@ -67,7 +67,7 @@ def test_navigation_continues_and_arrival_waits_until_explicit_head_lock(monkeyp
 
 def test_head_takeover_after_transit_pose_finished_waits_at_arrival(monkeypatch):
     r,w,data,clock,body,head=setup(monkeypatch)
-    data['backend']['measured_neck_deg'][1]=-30
+    data['backend']['measured_neck_deg'][1]=30
     data['backend']['task_head_goal']={'request_id':r._task_head_request_id,'requested_deg':30.,
                                      'effective_deg':30.,'safe_max_deg':43.}
     tick(r,data,clock);tick(r,data,clock,.2)
@@ -123,7 +123,7 @@ def test_manual_pose_still_yields_without_auto_resuming(monkeypatch):
 
 def test_repeated_takeover_resume_is_accepted_by_real_controller_goal_handler(monkeypatch):
     from test_task_head_pose import controller
-    from openarmx_teleop_vr_306_v4.controller_node import IndependentArmController as Controller
+    from openarmx_teleop_vr_306_v5.controller_node import IndependentArmController as Controller
     r,w,data,clock,body,head=setup(monkeypatch)
     c=controller()
     def publish(message):
@@ -150,7 +150,7 @@ def test_estop_cannot_be_misreported_as_pose_ready_even_at_target(monkeypatch):
     r,w,data,clock,body,head=setup(monkeypatch,'adjusting_height')
     data['backend']['task_head_goal']={'request_id':r._task_head_request_id,'requested_deg':30.,
                                      'effective_deg':30.,'safe_max_deg':43.}
-    data['backend'].update(measured_neck_deg=[0,-30,0],emergency_stop_latched=True)
+    data['backend'].update(measured_neck_deg=[0,30,0],emergency_stop_latched=True)
     r._task_height_stable_since=clock[0]-1
     tick(r,data,clock)
     assert w.snapshot()['state']=='failed'

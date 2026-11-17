@@ -121,7 +121,7 @@ class DepthCloudStream:
         """Build the stable full-frame UV set used by official-style mode.
 
         The native Autolife bridge keeps one stable UV specification and sends
-        depth/colour values for those positions.  Its robot_v2_2 defaults use
+        depth/colour values for those positions.  Its robot_v3_1 defaults use
         18,000 samples and an almost-flat foveation curve.  A regular grid with
         evenly discarded excess cells reproduces that configuration without
         shipping a large UV table to every browser.

@@ -46,6 +46,8 @@ const state = {
   realtimeLatestEncodedPacket: null,
   realtimeWatchdogTimer: null,
   xrSession: null,
+  observerOnly: new URLSearchParams(window.location.search || '').get('viewer') === '1',
+  vrControlCapable: false,
   brandHud: null,
   headText: null,
   vrNotice: null,
@@ -120,7 +122,12 @@ globalThis.autolifeVrCameraPreview = {
         id: cameraState.id,
         transport: cameraState.transportMode || 'waiting',
         frame: Number(cameraState.drawnFrameSeq ?? cameraState.drawnFrameCount ?? -1),
-        available: Boolean(cameraState.canvas?.width && cameraState.canvas?.height)
+        available: Boolean(cameraState.actualWidth > 0 && cameraState.actualHeight > 0),
+        width: Number(cameraState.actualWidth || 0),
+        height: Number(cameraState.actualHeight || 0),
+        size_source: cameraState.actualSizeSource || 'not_ready',
+        frame_age_ms: cameraState.lastVideoFrameAt > 0
+          ? Math.round(performance.now() - cameraState.lastVideoFrameAt) : null
       };
     }
     return { id: '', transport: 'waiting', frame: -1, available: false };
@@ -314,6 +321,18 @@ function renderHardwareControl() {
   const headToggle = document.getElementById('headFollowToggle');
   if (!card || !label || !detail || !button) return;
 
+  if (state.observerOnly || (!state.vrControlCapable && !state.xrSession)) {
+    card.classList.remove('is-busy', 'is-on', 'is-error');
+    card.classList.add('is-off');
+    label.textContent = '桌面状态预览，不占用VR控制连接';
+    detail.textContent = '请在头显浏览器打开本页面并进入VR。';
+    setHardwareButtonText(button, '请在头显中操作');
+    button.disabled = true;
+    if (waistToggle) waistToggle.disabled = true;
+    if (headToggle) headToggle.disabled = true;
+    return;
+  }
+
   if (!state.controlRequested) {
     card.classList.remove('is-busy', 'is-on', 'is-error');
     card.classList.add('is-off');
@@ -362,7 +381,14 @@ function renderHardwareControl() {
   } else if (teleop.hardware_enabled) {
     card.classList.add('is-on');
     label.textContent = ['active', 'armed'].includes(backendState) ? '真机遥操中' : '真机遥操已使能';
-    detail.textContent = teleop.detail || '先松开双手握把，再按住需要控制的一侧。';
+    const rearm = teleop.grip_rearm_required || {};
+    if (!vrInputIsFresh(teleop)) {
+      detail.textContent = '已使能，等待头显和手柄实时数据；请佩戴头显并将手柄保持在追踪范围内。';
+    } else if (rearm.left || rearm.right) {
+      detail.textContent = '已使能，请松开双手 Grip 后，再按住需要接管的一侧。';
+    } else {
+      detail.textContent = teleop.detail || '握住 Grip 即可接管对应手臂。';
+    }
     button.classList.add('is-disable-action');
     setHardwareButtonText(button, '关闭真机遥操');
   } else if (['fault', 'e_stop'].includes(backendState)) {
@@ -854,6 +880,19 @@ async function loadConfig() {
   return state.config;
 }
 
+async function detectVrControlCapability() {
+  if (state.observerOnly) { state.vrControlCapable = false; return false; }
+  try {
+    state.vrControlCapable = Boolean(navigator.xr
+      && typeof navigator.xr.isSessionSupported === 'function'
+      && await navigator.xr.isSessionSupported('immersive-vr'));
+  } catch (error) {
+    state.vrControlCapable = false;
+    console.warn('Immersive VR capability check failed:', error);
+  }
+  return state.vrControlCapable;
+}
+
 function websocketUrl() {
   const path = state.config?.network?.websocket_path || '/ws';
   const url = new URL(`wss://${window.location.host}${path}`);
@@ -863,6 +902,7 @@ function websocketUrl() {
 
 function connectWebSocket() {
   if (!state.controlRequested) return;
+  if (state.observerOnly || (!state.vrControlCapable && !state.xrSession)) return;
   if (state.websocket && [WebSocket.CONNECTING, WebSocket.OPEN].includes(state.websocket.readyState)) return;
   const url = websocketUrl();
   const websocket = new WebSocket(url);
@@ -874,6 +914,7 @@ function connectWebSocket() {
     setStatus(`VR data connected: ${url}`);
     refreshHardwareStatus();
     void connectRealtimeChannel();
+    state.image.cameras.forEach(camera => { void startCameraFeed(cameraId(camera)); });
   };
   websocket.onerror = () => {
     if (state.websocket === websocket) setStatus('VR data connection error');
@@ -1264,12 +1305,68 @@ function cameraId(cameraConfig) {
   return cameraConfig.id || cameraConfig.image_key || 'front';
 }
 
-function panelLayout(cameraIdValue) {
-  if (cameraIdValue === 'rgbd_head_color') return { x: 0, y: 0.02, width: 2.3, height: 1.725 };
-  if (cameraIdValue === 'front') return { x: 0, y: 0.16, width: 1.5, height: 1.12 };
-  if (cameraIdValue === 'left_wrist') return { x: -1.1, y: -0.08, width: 0.76, height: 0.57 };
-  if (cameraIdValue === 'right_wrist') return { x: 1.1, y: -0.08, width: 0.76, height: 0.57 };
-  return { x: 0, y: -0.08, width: 0.76, height: 0.57 };
+function panelLayout(cameraIdValue, sourceWidth = 0, sourceHeight = 0) {
+  let layout;
+  if (cameraIdValue === 'rgbd_head_color') layout = { x: 0, y: 0.02, width: 2.3, height: 1.725 };
+  else if (cameraIdValue === 'front') layout = { x: 0, y: 0.16, width: 1.5, height: 1.12 };
+  else if (cameraIdValue === 'left_wrist') layout = { x: -1.1, y: -0.08, width: 0.76, height: 0.57 };
+  else if (cameraIdValue === 'right_wrist') layout = { x: 1.1, y: -0.08, width: 0.76, height: 0.57 };
+  else layout = { x: 0, y: -0.08, width: 0.76, height: 0.57 };
+
+  const width = Number(sourceWidth);
+  const height = Number(sourceHeight);
+  if (cameraIdValue !== 'rgbd_head_color' && width > 0 && height > 0) {
+    layout.height = Number((layout.width * height / width).toFixed(6));
+  }
+  return layout;
+}
+
+function updateCameraPanelGeometry(id) {
+  const cameraState = state.image.states.get(id);
+  const panel = state.image.panels.get(id);
+  if (!cameraState) return null;
+
+  const width = cameraState.actualWidth || Number(cameraState.config.width) || 0;
+  const height = cameraState.actualHeight || Number(cameraState.config.height) || 0;
+  const layout = panelLayout(id, width, height);
+  if (!panel) return layout;
+
+  const previous = panel.layout;
+  if (!previous || previous.width !== layout.width) {
+    panel.screen.setAttribute('width', layout.width);
+    panel.border.setAttribute('width', (layout.width + 0.04).toFixed(6));
+  }
+  if (!previous || previous.height !== layout.height) {
+    panel.screen.setAttribute('height', layout.height);
+    panel.border.setAttribute('height', (layout.height + 0.04).toFixed(6));
+    panel.label.setAttribute('position', `0 ${(layout.height / 2 + 0.1).toFixed(4)} 0`);
+    panel.meta.setAttribute('position', `0 ${(-layout.height / 2 - 0.1).toFixed(4)} 0`);
+  }
+  panel.layout = layout;
+  return layout;
+}
+
+function recordCameraFrameSize(cameraState, width, height, source) {
+  const actualWidth = Math.floor(Number(width));
+  const actualHeight = Math.floor(Number(height));
+  if (
+    !cameraState
+    || !Number.isFinite(actualWidth)
+    || !Number.isFinite(actualHeight)
+    || actualWidth <= 0
+    || actualHeight <= 0
+  ) return false;
+
+  const changed = cameraState.actualWidth !== actualWidth
+    || cameraState.actualHeight !== actualHeight;
+  const sourceChanged = cameraState.actualSizeSource !== source;
+  cameraState.actualWidth = actualWidth;
+  cameraState.actualHeight = actualHeight;
+  cameraState.actualSizeSource = source;
+
+  if (changed) updateCameraPanelGeometry(cameraState.id);
+  if (changed || sourceChanged) updateCameraPanel(cameraState.id);
+  return changed || sourceChanged;
 }
 
 function createHiddenImageState(cameraConfig) {
@@ -1331,6 +1428,9 @@ function createHiddenImageState(cameraConfig) {
     lastVideoFrameAt: 0,
     decodedFrameCount: 0,
     drawnFrameCount: 0,
+    actualWidth: 0,
+    actualHeight: 0,
+    actualSizeSource: 'not_ready',
     clientFps: 0,
     fpsWindowStartedAt: 0,
     fpsWindowFrames: 0,
@@ -1440,6 +1540,9 @@ function pumpUnifiedVideoFrames(cameraState, peer, generation) {
       cameraState.fpsWindowFrames = 0;
       updateCameraPanel(cameraState.id);
     }
+    if (video.videoWidth > 0 && video.videoHeight > 0) {
+      recordCameraFrameSize(cameraState, video.videoWidth, video.videoHeight, 'video');
+    }
     if (
       (state.image.mode === 'rgbd' || navigationCameraPreviewActive())
       && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
@@ -1526,6 +1629,9 @@ function drawCameraFrame(id) {
   }
 
   if (!cameraState.img.complete || !cameraState.img.naturalWidth || !cameraState.img.naturalHeight) return;
+  recordCameraFrameSize(
+    cameraState, cameraState.img.naturalWidth, cameraState.img.naturalHeight, 'image'
+  );
   if (cameraState.canvas.width !== cameraState.img.naturalWidth || cameraState.canvas.height !== cameraState.img.naturalHeight) {
     cameraState.canvas.width = cameraState.img.naturalWidth;
     cameraState.canvas.height = cameraState.img.naturalHeight;
@@ -1544,15 +1650,16 @@ function createCameraPanel(cameraConfig) {
   if (!rig) return;
 
   const id = cameraId(cameraConfig);
-  const layout = panelLayout(id);
+  const layout = panelLayout(id, cameraConfig.width, cameraConfig.height);
   const panel = document.createElement('a-entity');
   panel.setAttribute('id', `${id}-camera-panel`);
   panel.setAttribute('position', `${layout.x} ${layout.y} 0`);
   panel.setAttribute('visible', state.image.mode === 'rgbd');
 
   const border = document.createElement('a-plane');
-  border.setAttribute('width', (layout.width + 0.04).toFixed(2));
-  border.setAttribute('height', (layout.height + 0.04).toFixed(2));
+  border.setAttribute('data-camera-border', 'true');
+  border.setAttribute('width', (layout.width + 0.04).toFixed(6));
+  border.setAttribute('height', (layout.height + 0.04).toFixed(6));
   border.setAttribute('color', '#202836');
   border.setAttribute('position', '0 0 -0.01');
   border.setAttribute('material', 'shader: flat; side: double');
@@ -1570,7 +1677,7 @@ function createCameraPanel(cameraConfig) {
   label.setAttribute('align', 'center');
   label.setAttribute('color', '#FFFFFF');
   label.setAttribute('width', '1.6');
-  label.setAttribute('position', `0 ${(layout.height / 2 + 0.1).toFixed(2)} 0`);
+  label.setAttribute('position', `0 ${(layout.height / 2 + 0.1).toFixed(4)} 0`);
   panel.appendChild(label);
 
   const meta = document.createElement('a-text');
@@ -1578,11 +1685,11 @@ function createCameraPanel(cameraConfig) {
   meta.setAttribute('align', 'center');
   meta.setAttribute('color', '#B8C7D9');
   meta.setAttribute('width', '1.2');
-  meta.setAttribute('position', `0 ${(-layout.height / 2 - 0.1).toFixed(2)} 0`);
+  meta.setAttribute('position', `0 ${(-layout.height / 2 - 0.1).toFixed(4)} 0`);
   panel.appendChild(meta);
 
   rig.appendChild(panel);
-  state.image.panels.set(id, { panel, screen, label, meta });
+  state.image.panels.set(id, { panel, screen, border, label, meta, layout });
 }
 
 function updateCameraPanel(id) {
@@ -1591,8 +1698,11 @@ function updateCameraPanel(id) {
   if (!cameraState || !panel || !cameraState.status) return;
 
   panel.label.setAttribute('value', cameraState.status.name || id);
+  const actualSize = cameraState.actualWidth > 0 && cameraState.actualHeight > 0
+    ? `${cameraState.actualWidth}x${cameraState.actualHeight}`
+    : `not_ready (config ${cameraState.config.width || 0}x${cameraState.config.height || 0})`;
   const text = [
-    `${cameraState.status.width || 0}x${cameraState.status.height || 0}`,
+    `actual: ${actualSize}`,
     `${cameraState.status.fps || 0} FPS`,
     `transport: ${cameraState.transportMode}`,
     `client: ${Number(cameraState.clientFps || 0).toFixed(1)} FPS`,
@@ -1619,12 +1729,24 @@ async function reportCameraClientStatus() {
   const now = performance.now();
   const cameras = {};
   state.image.states.forEach((cameraState, id) => {
+    const layout = state.image.panels.get(id)?.layout
+      || panelLayout(id, cameraState.config.width, cameraState.config.height);
+    const hasActualSize = cameraState.actualWidth > 0 && cameraState.actualHeight > 0;
     cameras[id] = {
       mode: state.image.mode,
       transport: cameraState.transportMode,
       client_fps: Number(cameraState.clientFps.toFixed(1)),
       decoded_frames: cameraState.decodedFrameCount,
       drawn_frames: cameraState.drawnFrameCount,
+      actual_width: hasActualSize ? cameraState.actualWidth : 0,
+      actual_height: hasActualSize ? cameraState.actualHeight : 0,
+      plane_width: layout.width,
+      plane_height: layout.height,
+      aspect: hasActualSize
+        ? Number((cameraState.actualWidth / cameraState.actualHeight).toFixed(6)) : 0,
+      plane_aspect: Number((layout.width / layout.height).toFixed(6)),
+      navigation: globalThis.autolifeNavigationVideoStatus?.() || null,
+      size_source: hasActualSize ? cameraState.actualSizeSource : 'not_ready',
       video_age_ms: cameraState.lastVideoFrameAt > 0
         ? Math.round(now - cameraState.lastVideoFrameAt) : null,
       fallback_reason: cameraState.fallbackReason
@@ -1737,7 +1859,14 @@ function startMjpegStream(id) {
   const loadStream = () => {
     cameraState.img.src = `/api/camera/stream.mjpg?camera=${encodeURIComponent(id)}&ts=${Date.now()}`;
   };
-  cameraState.img.onload = () => updateCameraPanel(id);
+  cameraState.img.onload = () => {
+    if (cameraState.img.naturalWidth > 0 && cameraState.img.naturalHeight > 0) {
+      recordCameraFrameSize(
+        cameraState, cameraState.img.naturalWidth, cameraState.img.naturalHeight, 'image'
+      );
+    }
+    updateCameraPanel(id);
+  };
   cameraState.img.onerror = () => {
     cameraState.transportMode = 'mjpeg-retrying';
     updateCameraPanel(id);
@@ -1782,6 +1911,7 @@ async function startLatestJpegStream(id) {
       if (cameraState.transportMode === 'unified-webrtc') continue;
       const bitmap = await createImageBitmap(blob);
       try {
+        recordCameraFrameSize(cameraState, bitmap.width, bitmap.height, 'bitmap');
         if (
           cameraState.canvas.width !== bitmap.width
           || cameraState.canvas.height !== bitmap.height
@@ -1857,6 +1987,9 @@ function pumpIndependentVideoFrames(cameraState, peer, generation) {
       || video.srcObject === null
     ) return;
 
+    if (video.videoWidth > 0 && video.videoHeight > 0) {
+      recordCameraFrameSize(cameraState, video.videoWidth, video.videoHeight, 'video');
+    }
     const now = performance.now();
     cameraState.lastVideoFrameAt = now;
     cameraState.decodedFrameCount += 1;
@@ -1934,6 +2067,11 @@ function startCameraWatchdog() {
 async function startCameraFeed(id) {
   const cameraState = state.image.states.get(id);
   if (!cameraState || cameraState.cameraConnectInFlight) return;
+  if (state.observerOnly || (!state.vrControlCapable && !state.xrSession)
+      || state.websocket?.readyState !== WebSocket.OPEN) {
+    void startLatestJpegStream(id);
+    return;
+  }
   cameraState.img.setAttribute('referrerpolicy', 'no-referrer');
   cameraState.img.decoding = 'async';
 
@@ -2211,6 +2349,10 @@ AFRAME.registerComponent('telegrip-vr-bridge', {
       this.resetDesktopModeChord();
       this.cameraTogglePressed = false;
       state.xrSession = this.el.renderer.xr.getSession();
+      if (!state.observerOnly) {
+        state.vrControlCapable = true;
+        connectWebSocket();
+      }
       ensureVrNotice();
       setCameraMode('passthrough');
       setStatus('VR 已进入，正在检测手柄实时姿态。');
@@ -2593,7 +2735,7 @@ AFRAME.registerComponent('telegrip-vr-bridge', {
       const rightReady = Boolean(rightController?.position);
       state.headText.setAttribute(
         'value',
-        `AUTOLIFE 306 V4 / PAGE V3\n` +
+        `AUTOLIFE VR V5 / NAVIGATION\n` +
         `Server: ${serverReady ? 'CONNECTED' : 'DISCONNECTED'} | ` +
         `Left: ${leftReady ? 'READY' : 'MISSING'} | Right: ${rightReady ? 'READY' : 'MISSING'}\n` +
         `Head Follow: ${headFollowEnabledFromStatus() ? 'ON' : 'OFF'} | Pose: ${state.teleop.xrPoseFresh ? 'LIVE' : 'STALE'}\n` +
@@ -2611,6 +2753,7 @@ AFRAME.registerComponent('telegrip-vr-bridge', {
     if (!state.xrSession) return;
 
     const tracked = this.updateThumbsticks();
+    globalThis.autolifeTeaching?.tick(this.leftButtons,this.rightButtons,tracked);
     this.checkDesktopModeGesture(tracked);
     const leftController = this.controllerForHand('left', this.leftHand, this.leftButtons);
     const rightController = this.controllerForHand('right', this.rightHand, this.rightButtons);
@@ -2655,6 +2798,7 @@ async function init() {
   setServerUrl();
   setStatus('Loading configuration...');
   await loadConfig();
+  await detectVrControlCapability();
 
   const scene = document.querySelector('a-scene');
   if (scene.hasLoaded) {
