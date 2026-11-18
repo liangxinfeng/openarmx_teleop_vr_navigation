@@ -1,0 +1,594 @@
+{
+  "robot": "283",
+  "source_package": "openarmx_teleop_vr_navigation_306",
+  "date": "2026-11-18",
+  "source_host": "10.10.1.30",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 1916,
+      "sha256": "5f2304036399e8c3367183ee23f109ad5ade443bf92f3def9c1bb6aa6acc71bd",
+      "mode": 436
+    },
+    {
+      "path": "SYNC_ENABLE_GRIPPER.md",
+      "bytes": 950,
+      "sha256": "fdd66f6472bbe89b7c1465564403d69bd8de5656186db39a11129823a673045e",
+      "mode": 436
+    },
+    {
+      "path": "TASKS_283.md",
+      "bytes": 1903,
+      "sha256": "89f7f0bf60323a0e4d35089bcf4f37d5fe78597f73f6362f2516f43485b051bf",
+      "mode": 436
+    },
+    {
+      "path": "VR_EXIT_SYNC.md",
+      "bytes": 756,
+      "sha256": "08da7a7aa80f81cd45cacdfc729fc792a59f62fba44885cf346b0cf5cb76225f",
+      "mode": 436
+    },
+    {
+      "path": "config/delivery_handoff.json",
+      "bytes": 783,
+      "sha256": "1159ddc8adc46926466d718559d07afb227a9102cbf1b8a4070001a743c5edce",
+      "mode": 420
+    },
+    {
+      "path": "config/hotel_missions.json",
+      "bytes": 1836,
+      "sha256": "3aaf09b3eb733e0b101e355a84f507c52351bb69f7ce9f654ecd9aff6410fdf5",
+      "mode": 420
+    },
+    {
+      "path": "config/public_area_sync.json",
+      "bytes": 651,
+      "sha256": "7ea729229833b9d2e854a4ba514e4460b8711a933e3778272ebdd2499547cbba",
+      "mode": 436
+    },
+    {
+      "path": "config/task_actions.json",
+      "bytes": 4257,
+      "sha256": "356fda0581776d8f3c6a71bda91167aad72683476e1bb3e1758aab90062e0f9b",
+      "mode": 436
+    },
+    {
+      "path": "config/task_actions.txt",
+      "bytes": 4142,
+      "sha256": "1a5dc348ad2b5d311f2c1c469a9de5a607b4e9c16ac102a21ddc6df3cc9a5b8c",
+      "mode": 420
+    },
+    {
+      "path": "config/task_actions1.json",
+      "bytes": 2110,
+      "sha256": "a622ba311192ffc475cf6ad002784b384bdc7538966ef8211c17b7569db8eefe",
+      "mode": 384
+    },
+    {
+      "path": "launch/full_vr_navigation.launch.py",
+      "bytes": 11038,
+      "sha256": "fc44ada254331ffe9a18e6de2519c124acc81d682f08fbd4aa301a11f6ca06fd",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/__init__.py",
+      "bytes": 78,
+      "sha256": "6e3b29d72974da7844d2c69885d39500dcd91b3f136cea4a433f6fcf6048cde2",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/corridor_projection_node.py",
+      "bytes": 26423,
+      "sha256": "93e008673f336ee1e277be2b69283efc3cbbfa6187c5687103de468323e944b1",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/delivery_handoff.py",
+      "bytes": 35827,
+      "sha256": "65c4293bf45a8d9988e998a28210df51df1a66f2715823d29b9d1081bb49d8e0",
+      "mode": 420
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/depth_cloud_stream.py",
+      "bytes": 15616,
+      "sha256": "7d64048dd89e99d79d4cdfcce86b2c003998a5110cdd1bf667bbd853c3bae377",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/hotel_bridge.py",
+      "bytes": 20086,
+      "sha256": "a803ca091c67300be626e0529da73a4ccd3673040848514ec8e9653d58b3d3eb",
+      "mode": 420
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/hotel_config.py",
+      "bytes": 5454,
+      "sha256": "8f06487225a86761738272b8d4161af00167da710357ea75fb542411d4284ac1",
+      "mode": 420
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/hotel_mission.py",
+      "bytes": 49188,
+      "sha256": "3244439b285a3022ad8c81342e90dd268b21e3b5ad1fb7eb6534f109d7973805",
+      "mode": 420
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/hotel_service.py",
+      "bytes": 19606,
+      "sha256": "2d91ea9b024509a56d4f955b8ea5fe52842dfb4fc5b5949fc9713a547b4c8804",
+      "mode": 420
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/mission_recorder.py",
+      "bytes": 33538,
+      "sha256": "88ebbd9fb10eef85d57d291cda97db695190aa660488070a1e1d67318f507b9b",
+      "mode": 420
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/navigation_web_bridge.py",
+      "bytes": 165118,
+      "sha256": "f088cac4f927fe40e88e9349c40008a2e2a1250f2920d2e748231d53385cc6cd",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/proximity_alert.py",
+      "bytes": 4309,
+      "sha256": "60af4ceb2f16327724c2be03705574a5bf4b3664f2a4935b983f18790d6d139e",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/proximity_alert_node.py",
+      "bytes": 4743,
+      "sha256": "31444f8f930d3ea76aa806694cceb05b89786ced8d8317e53636a510bc5471b2",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/public_area_sync.py",
+      "bytes": 53664,
+      "sha256": "12d77f97ddd06e3d4d1ef572e36fec400c6265853a7949da57e8b8c6ce7d32a3",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/public_area_track.py",
+      "bytes": 11018,
+      "sha256": "c331a2539b53963e7e5398deeb47d9c080e356d88e1d09dc36ced8da2541abb6",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/recognition_provider.py",
+      "bytes": 3491,
+      "sha256": "6b822de864194cb2dca0699401087ef69681ec744a47c782f1d748bfdd11f39f",
+      "mode": 420
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/recognition_worker.py",
+      "bytes": 6614,
+      "sha256": "600cc187cf781fa07cd48c6079752727123f3c452160d858c6e8b6002bde9ad9",
+      "mode": 420
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/reset_bridge.py",
+      "bytes": 6648,
+      "sha256": "3cb4b0105c986b3b3f10fe3a59856ab3ed1b4da0961d5952faaee9eb43d3c667",
+      "mode": 420
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/session_controls.py",
+      "bytes": 2071,
+      "sha256": "99d29f19441af88b264c1497eef3403b4b7de45bcc15597ca83dcb85350fdc20",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/simple_task_catalog.py",
+      "bytes": 4996,
+      "sha256": "44157bf34691b493f2b1793c0a8ee9f787ced9352358157e91e3ad5372f640b6",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/speech_queue.py",
+      "bytes": 1478,
+      "sha256": "ac13c0781fc1a49e6a4ae2927bec6d7fc7527ce53cd376348e2bc5440775b9fc",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/task_page.py",
+      "bytes": 33172,
+      "sha256": "d83e48fd995a95538b027c79b90389d02c7def72325aa896e7eaf37ece099f20",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/task_planner.py",
+      "bytes": 10276,
+      "sha256": "57233e0569c80cc6d958fe20b982e1318ac6a5b9844912e4643ecc8950d853f2",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/task_speech_node.py",
+      "bytes": 7196,
+      "sha256": "67f211d365d1d2db2bbf4583199ed55f538613a740e21b2bcf55fc89805872b5",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/task_voice_web.py",
+      "bytes": 20426,
+      "sha256": "c3f636f616f66abb45365a5faa906b00b11aabacc867c9b029ee9d8b7555270d",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/task_workflow.py",
+      "bytes": 15155,
+      "sha256": "daa0ecedb1708e204efbaa06b5bb4fac9f774ee07372859bb21572579b6fb9bf",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/travel_head.py",
+      "bytes": 5449,
+      "sha256": "629fede71a8d4902dc8d53bd4eced4a1223859655ffe22cb62861b0f56c18f22",
+      "mode": 436
+    },
+    {
+      "path": "openarmx_teleop_vr_navigation_306/voice_mode_router.py",
+      "bytes": 3888,
+      "sha256": "4d918cadaad0d201872d4e015a08e2ab3ba8bdda4d341fcfed12edff44c80702",
+      "mode": 436
+    },
+    {
+      "path": "package.xml",
+      "bytes": 1349,
+      "sha256": "ac1b3553018d4f50ebff6460bfbc129d90fd4a585b72cd98ce417cfe913431a0",
+      "mode": 436
+    },
+    {
+      "path": "resource/openarmx_teleop_vr_navigation_306",
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "mode": 436
+    },
+    {
+      "path": "scripts/link_task_catalog.sh",
+      "bytes": 1301,
+      "sha256": "9ba1c66911f6390696d6d0b7ea564c4422a47e12120d29d715de3309be041ec5",
+      "mode": 493
+    },
+    {
+      "path": "scripts/start_vr_navigation_306.sh",
+      "bytes": 8081,
+      "sha256": "b36c3e7ebfb47ba47a4be044c0d8f29b6a4b9178905170e2542c0adab6254ff2",
+      "mode": 493
+    },
+    {
+      "path": "scripts/vr_navigation_desktop_app.py",
+      "bytes": 24523,
+      "sha256": "7e6be073bb77eb4158517c01f53759d5ce40698649dada742e6b555b2d1db233",
+      "mode": 436
+    },
+    {
+      "path": "setup.cfg",
+      "bytes": 135,
+      "sha256": "6db47a838b858a930f82dbb50188998ca7618e739a36f5d5eb30ad218143d6f5",
+      "mode": 436
+    },
+    {
+      "path": "setup.py",
+      "bytes": 1551,
+      "sha256": "dece821cf0a355d7eb96b5bfd2c7538436c5a336ed1212dd0e2f32b75881451d",
+      "mode": 436
+    },
+    {
+      "path": "test/probe_real_handoff.py",
+      "bytes": 1152,
+      "sha256": "674258cf55bd72ce86cc6d2ea1c893b370748039961c18869b56d834f46058d1",
+      "mode": 493
+    },
+    {
+      "path": "test/smoke_bridge_delivery.py",
+      "bytes": 16573,
+      "sha256": "6adc854981a70eb1644b3b9109987a5e161ebdd3dac55ec2c9ec473eb73624f9",
+      "mode": 493
+    },
+    {
+      "path": "test/test_delivery_arrival.py",
+      "bytes": 2238,
+      "sha256": "3b3f1a9db64130aac42ab30a151a24fa193031c8546283cad3cd05fe7f310dbe",
+      "mode": 436
+    },
+    {
+      "path": "test/test_delivery_arrival_keys.cjs",
+      "bytes": 3239,
+      "sha256": "a909cf8856b2f5f3ceaa123a3a8e4401a056834ed710bee552c227bfe4d28ab3",
+      "mode": 436
+    },
+    {
+      "path": "test/test_delivery_close.py",
+      "bytes": 6676,
+      "sha256": "facb1b997d871468f8dc50e8d0f888eeab8958902026b291523a3637f6cd4ccd",
+      "mode": 420
+    },
+    {
+      "path": "test/test_delivery_close_keys.cjs",
+      "bytes": 1937,
+      "sha256": "41a5c3c5a9ca5369355a626e951b2f68b0216fb343ef4bff70446e343ba21721",
+      "mode": 436
+    },
+    {
+      "path": "test/test_delivery_handoff.py",
+      "bytes": 20831,
+      "sha256": "6b543ccf052e9481a4e93d4113c00ea9e5ad90d02e5d59cc4b01297f2e46959a",
+      "mode": 493
+    },
+    {
+      "path": "test/test_delivery_offer.py",
+      "bytes": 7149,
+      "sha256": "e94aa5201dd4779eab215aa1a985b7df45aeb098e075f96969cbaa2bfecc0e9f",
+      "mode": 420
+    },
+    {
+      "path": "test/test_delivery_offer_keys.cjs",
+      "bytes": 2416,
+      "sha256": "2df411e6197c24a8160053c151da2be6edcd76fe6d352dca69b477f3ab116d67",
+      "mode": 420
+    },
+    {
+      "path": "test/test_delivery_return_load_keys.cjs",
+      "bytes": 1628,
+      "sha256": "a306031b8342ee4223f8eae419ef96bd2399fb55fe2fa8a45927bb678c6ed081",
+      "mode": 420
+    },
+    {
+      "path": "test/test_hotel_bridge.py",
+      "bytes": 11512,
+      "sha256": "c7f7986622ddd90a220206b601f6edd97d89bfeca602d3a15b2a4ac74b1ceba8",
+      "mode": 420
+    },
+    {
+      "path": "test/test_hotel_catalog_pickup.py",
+      "bytes": 10047,
+      "sha256": "a84230a504a8899d4c550fb6eb472fce95fdf09ee2628f423678ae0fd781d5dd",
+      "mode": 420
+    },
+    {
+      "path": "test/test_hotel_keys.cjs",
+      "bytes": 4645,
+      "sha256": "957fb1feeb17b1b1f861c9fe034ce66729da7381ef5d69c7dd7d8ea7882dbc7b",
+      "mode": 420
+    },
+    {
+      "path": "test/test_hotel_mission.py",
+      "bytes": 9502,
+      "sha256": "711ea242799916eec75defa25fa0ed09dd0cf6d98c2799170962484dc677d7ab",
+      "mode": 420
+    },
+    {
+      "path": "test/test_hotel_service.py",
+      "bytes": 7311,
+      "sha256": "8e5448da9ff787a029a4b47cbf1628d9f3717a6bd52c75d58236fc893a543950",
+      "mode": 420
+    },
+    {
+      "path": "test/test_mission_recorder.py",
+      "bytes": 1804,
+      "sha256": "6dcae81b045a8bae2f459ad3cd18b752ffb8c06a31e65be413b583619de81c4d",
+      "mode": 420
+    },
+    {
+      "path": "test/test_navigation_logic.py",
+      "bytes": 34281,
+      "sha256": "87c9a1e845cf5c3ac992a17c4983d6bb553842d8cb0d4b4733f27d196350d1bf",
+      "mode": 436
+    },
+    {
+      "path": "test/test_operator_intervention.py",
+      "bytes": 8297,
+      "sha256": "08f81ac92db5e7b500480d561f441e84118d1f2b60cf4abe525b1d7779245d6f",
+      "mode": 436
+    },
+    {
+      "path": "test/test_operator_keys.cjs",
+      "bytes": 2429,
+      "sha256": "bc1dd6b61362faae040b6e8e375a3371e89d2242f4369467b5d2f0a7088a496c",
+      "mode": 436
+    },
+    {
+      "path": "test/test_recognition_provider.py",
+      "bytes": 1837,
+      "sha256": "732747eac173bb2a8e88fdd85e74608f181cc09140785c7ba3ddadf2e24ddbd9",
+      "mode": 420
+    },
+    {
+      "path": "test/test_recognition_worker.py",
+      "bytes": 1171,
+      "sha256": "7a2467ff8436b75922b8978dd2907553002bb811b75332a24f8f762a9551388f",
+      "mode": 420
+    },
+    {
+      "path": "test/test_reset_bridge.py",
+      "bytes": 2637,
+      "sha256": "747a36c1ac8587462f18d2c3f8ef0bd899705dbf2d623e2b9d3a2e78ae89931b",
+      "mode": 420
+    },
+    {
+      "path": "test/test_reset_controls.cjs",
+      "bytes": 9385,
+      "sha256": "831272f2d612ad434954190ec65759c1634477263c1aecf921b455db5a766175",
+      "mode": 420
+    },
+    {
+      "path": "test/test_reset_integration.cjs",
+      "bytes": 2577,
+      "sha256": "5d1efdb48838e6018d5097afcbc87309a1295500146212f5bf90318350b66224",
+      "mode": 420
+    },
+    {
+      "path": "test/test_simple_task_catalog.py",
+      "bytes": 6150,
+      "sha256": "5c48a4be446806ee5f49278adb4b7c9b4f201fb35fff540ba59d1ddae0bc213b",
+      "mode": 436
+    },
+    {
+      "path": "test/test_task_head_pose.py",
+      "bytes": 7834,
+      "sha256": "cbc45061eec7d9eadc37a2b01a7489bcf702993fded0fd86c92775f7a1fa77f7",
+      "mode": 436
+    },
+    {
+      "path": "test/test_task_height_feedback.py",
+      "bytes": 6960,
+      "sha256": "21ac84887d5f4a22a76990462c1d8d7d135f010b503cb574b7df9b41b8252942",
+      "mode": 436
+    },
+    {
+      "path": "test/test_task_live_refresh_session.py",
+      "bytes": 9215,
+      "sha256": "4d97a497c96e5409f132e24c85be5a7198576269030d55be7d255f9ea56acb96",
+      "mode": 436
+    },
+    {
+      "path": "test/test_task_workflow.py",
+      "bytes": 6061,
+      "sha256": "edf06bf58dcaeb5f560368d44866e3c43d9e0aff83249c7e06abb27e3ec7fd24",
+      "mode": 436
+    },
+    {
+      "path": "test/test_yb_chord.cjs",
+      "bytes": 1508,
+      "sha256": "5b335fab275378bf9c8f46780b634c518e10cdc192b07db1081392cc5a2bf711",
+      "mode": 436
+    },
+    {
+      "path": "web/audience.css",
+      "bytes": 13270,
+      "sha256": "801c3b8b4b4c078d1a9054c46c0f75b632908d6abd7000ac7b63f58b201ded9e",
+      "mode": 436
+    },
+    {
+      "path": "web/audience.html",
+      "bytes": 4104,
+      "sha256": "04dda94a81f1150cb38b5fced49fa16ff26ad2f29a95acbd9c9b3c1a9bb09372",
+      "mode": 436
+    },
+    {
+      "path": "web/audience.js",
+      "bytes": 12695,
+      "sha256": "f8972aa5d3209e9c87ca62ea98764893e89857dc3f876ef7bc79a795b490b398",
+      "mode": 436
+    },
+    {
+      "path": "web/drive_worker.js",
+      "bytes": 3097,
+      "sha256": "bf3d92f71638cf1f01c22a8fe62c60fda21f6590fa68815417f9e824b110a211",
+      "mode": 436
+    },
+    {
+      "path": "web/hotel_controls.js",
+      "bytes": 12732,
+      "sha256": "b4c2755d7b674ec210e1949c41df7fa4b907307cbf02c4046839abb0ea3997b2",
+      "mode": 420
+    },
+    {
+      "path": "web/index.html",
+      "bytes": 4937,
+      "sha256": "4ae090b71c6666453a156908a701fb2e8a50c03b77bf36fa00914b939e829a16",
+      "mode": 436
+    },
+    {
+      "path": "web/monitor.css",
+      "bytes": 618,
+      "sha256": "f83a15779d66741a86c1e1fca9824ed293de1cd4052737358f0da5f77e258190",
+      "mode": 436
+    },
+    {
+      "path": "web/monitor.html",
+      "bytes": 435,
+      "sha256": "ef6ab5ec02e55945dbd247bd3b892b8658798c62201c99ebfc0cf75d0484227e",
+      "mode": 436
+    },
+    {
+      "path": "web/monitor.js",
+      "bytes": 21986,
+      "sha256": "9676eb8678bec381aa96832c84d9e9ec6a76e979522a44ba21c3c8a40626654b",
+      "mode": 436
+    },
+    {
+      "path": "web/nav_app.js",
+      "bytes": 148782,
+      "sha256": "97d25564705284bb35e66987c7e26ffd688db1b844ebf0a9746e5b5a0625d620",
+      "mode": 436
+    },
+    {
+      "path": "web/nav_styles.css",
+      "bytes": 275,
+      "sha256": "37dd0bc2f0327deb86784329b4b87e29da666a11c3ea62f31e149fab341973df",
+      "mode": 436
+    },
+    {
+      "path": "web/reset_controls.js",
+      "bytes": 22783,
+      "sha256": "90f3c3ce70877b366a36c9a5326d778a75f51d91dd227e414aba295d8f101a64",
+      "mode": 420
+    },
+    {
+      "path": "web/vr_app.js",
+      "bytes": 98280,
+      "sha256": "8528498076b9aba6d9b7ff2fb52cdddd4a520a29f4a122f84a06603478fbac22",
+      "mode": 436
+    },
+    {
+      "path": "web/vr_custom_controls.js",
+      "bytes": 11416,
+      "sha256": "7d878902581b779f20a5724b791eae8047078032d4263a61b18bc167c964e970",
+      "mode": 436
+    }
+  ],
+  "excluded": [
+    ".pytest_cache\\.gitignore",
+    ".pytest_cache\\CACHEDIR.TAG",
+    ".pytest_cache\\README.md",
+    ".pytest_cache\\v\\cache\\lastfailed",
+    ".pytest_cache\\v\\cache\\nodeids",
+    ".pytest_cache\\v\\cache\\stepwise",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\__init__.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\corridor_projection_node.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\delivery_handoff.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\depth_cloud_stream.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\hotel_bridge.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\hotel_config.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\hotel_mission.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\hotel_service.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\mission_recorder.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\navigation_web_bridge.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\public_area_sync.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\public_area_track.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\recognition_provider.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\recognition_worker.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\reset_bridge.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\session_controls.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\simple_task_catalog.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\task_page.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\task_planner.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\task_speech_node.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\task_voice_web.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\task_workflow.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\travel_head.cpython-312.pyc",
+    "openarmx_teleop_vr_navigation_306\\__pycache__\\voice_mode_router.cpython-312.pyc",
+    "scripts\\__pycache__\\vr_navigation_desktop_app.cpython-312.pyc",
+    "test\\__pycache__\\test_delivery_arrival.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_delivery_close.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_delivery_handoff.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_delivery_offer.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_hotel_bridge.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_hotel_catalog_pickup.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_hotel_mission.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_hotel_service.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_mission_recorder.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_navigation_logic.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_operator_intervention.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_recognition_provider.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_recognition_worker.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_reset_bridge.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_simple_task_catalog.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_task_head_pose.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_task_height_feedback.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_task_live_refresh_session.cpython-312-pytest-7.4.4.pyc",
+    "test\\__pycache__\\test_task_workflow.cpython-312-pytest-7.4.4.pyc"
+  ]
+}

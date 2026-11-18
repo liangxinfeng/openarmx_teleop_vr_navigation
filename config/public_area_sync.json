@@ -1,0 +1,21 @@
+{
+  "enabled": true,
+  "base_url": "https://hotel.cloudbutterfly.cn",
+  "hotel_id": "cq-sushi-nanbinlu",
+  "token_file": "/home/ubuntu/.config/vr283/public_area_token",
+  "robot_id": "283",
+  "upload_chains": ["酒店公区巡查"],
+  "record_root": "/home/ubuntu/Documents/sushi_task_records",
+  "request_timeout_seconds": 10,
+  "min_upload_interval_seconds": 2,
+  "heartbeat_seconds": 30,
+  "reconcile_seconds": 60,
+  "stale_running_seconds": 1800,
+  "upload_photos": true,
+  "allow_lan_addresses": false,
+  "source_tag": "vr283-bridge",
+  "track_enabled": true,
+  "track_sample_seconds": 2,
+  "track_max_points": 6000,
+  "track_write_seconds": 5
+}

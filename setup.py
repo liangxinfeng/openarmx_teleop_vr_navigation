@@ -19,6 +19,7 @@ setup(
     scripts=[
         'scripts/start_vr_navigation_306.sh',
         'scripts/vr_navigation_desktop_app.py',
+        'scripts/link_task_catalog.sh',
     ],
     zip_safe=False,
     maintainer='Autolife Robotics',

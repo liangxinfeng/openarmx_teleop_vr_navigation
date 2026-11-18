@@ -18,6 +18,21 @@ EMBEDDED_LOGO="${AUTOLIFE_EMBEDDED_LOGO:-0}"
 red() { printf '\033[31m%s\033[0m\n' "$*"; }
 green() { printf '\033[32m%s\033[0m\n' "$*"; }
 
+DRY_RUN=false
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run|--view-only) DRY_RUN=true ;;
+    --help|-h)
+      printf '用法: %s [--dry-run]
+' "$0"
+      printf '  --dry-run  只查看模式：不使能机械臂，只查看画面/订单
+'
+      exit 0
+      ;;
+    *) red "未知参数：$arg"; exit 2 ;;
+  esac
+done
+
 stop_child() {
   [ -n "$CHILD_PID" ] || return 0
   if [ -n "$CHILD_PGID" ]; then
@@ -129,9 +144,10 @@ elif [ "$GV_STATE" != 'inactive' ] && [ "$GV_STATE" != 'failed' ]; then
   exit 4
 fi
 
-# Only reuse a remaining AMCL when it belongs to a complete control-center
+# Detect native/compat AMCL and the waypoint manager before spawning Nav2.
+# Only reuse a remaining stack when it belongs to a complete control-center
 # navigation stack. A vendor AMCL by itself has no map-specific waypoint API.
-if pgrep -af '/nav2_amcl/amcl|nav2_amcl.*--ros-args' >/tmp/vr306nav-amcl.txt; then
+if pgrep -af '/nav2_amcl/amcl|/control_center_navigation/amcl_startup_compat|/control_center_navigation/waypoint_manager_node.py|nav2_amcl.*--ros-args' >/tmp/vr306nav-amcl.txt; then
   SERVICE_LIST="$(timeout 4 ros2 service list 2>/dev/null || true)"
   if grep -qx '/list_waypoints' <<<"$SERVICE_LIST" \
       && grep -qx '/navigate_to_waypoint' <<<"$SERVICE_LIST" \
@@ -141,7 +157,7 @@ if pgrep -af '/nav2_amcl/amcl|nav2_amcl.*--ros-args' >/tmp/vr306nav-amcl.txt; th
     printf '检测到完整的控制中心导航，复用当前地图、航点和全局重定位。\n'
   else
     GV_RESTORE_ALLOWED=0
-    red '停止厂商定位后仍检测到不完整的外部AMCL。为避免TF冲突，本次未启动。'
+    red '检测到尚未就绪的外部导航。请先启动完整的控制中心导航，或退出原导航后再启动VR。'
     cat /tmp/vr306nav-amcl.txt
     exit 4
   fi
@@ -155,6 +171,8 @@ if [ -z "$ROBOT_WEB_IP" ]; then
   ROBOT_WEB_IP="$(hostname -I | awk '{print $1}')"
 fi
 printf '  机械臂：复用现有自研遥操核心，网页内仍需长按1秒使能\n'
+printf '  模式：%s
+' "$([ "$DRY_RUN" = true ] && echo '只查看（dry_run，机械臂不可使能）' || echo '正常遥操')"
 printf '  底盘：左摇杆按键作为行驶确认，200ms数据超时立即停车\n'
 printf '  导航：%s\n' "$([ "$START_NAVIGATION_STACK" = true ] && echo '启动当前地图、AMCL、航点和全局重定位' || echo '复用已经运行的控制中心导航')"
 printf '  VR遥操与导航：https://%s:8445\n' "$ROBOT_WEB_IP"
@@ -162,7 +180,7 @@ printf '  语音任务分发：https://%s:8766\n' "$ROBOT_WEB_IP"
 printf '按 Ctrl+C 退出；若本脚本暂停了厂商定位，退出后会自动恢复。\n\n'
 
 setsid ros2 launch openarmx_teleop_vr_navigation_306 full_vr_navigation.launch.py \
-  dry_run:=false \
+  dry_run:="$DRY_RUN" \
   start_navigation_stack:="$START_NAVIGATION_STACK" &
 CHILD_PID=$!
 CHILD_PGID="$(ps -o pgid= -p "$CHILD_PID" | tr -d ' ')"

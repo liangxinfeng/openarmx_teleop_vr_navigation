@@ -29,6 +29,9 @@ def generate_launch_description():
     corridor_projection_enabled = LaunchConfiguration('corridor_projection_enabled')
     task_voice_enabled = LaunchConfiguration('task_voice_enabled')
     task_voice_port = LaunchConfiguration('task_voice_port')
+    proximity_alert_enabled = LaunchConfiguration('proximity_alert_enabled')
+    travel_head_pose_enabled = LaunchConfiguration('travel_head_pose_enabled')
+    travel_head_pitch_deg = LaunchConfiguration('travel_head_pitch_deg')
 
     teleop = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -63,6 +66,7 @@ def generate_launch_description():
             # Navigation view stays visually level: retain Pitch/Yaw tracking
             # while ignoring HMD side tilt on the neck Roll axis.
             'head_roll_follow_enabled': 'false',
+            'yb_reset_menu_enabled': 'true',
             # X/Y height control is accepted only by this navigation launch;
             # the standalone ~/vr306 behavior remains unchanged.
             'body_height_control_enabled': 'true',
@@ -70,7 +74,7 @@ def generate_launch_description():
             # time scaling: velocity x1.5, acceleration x1.5^2 and jerk
             # x1.5^3, producing an approximately 1.5x faster synchronized
             # Ruckig reset without changing targets or joint bounds.
-            'body_height_lowering_rate_m_sec': '0.15',
+            'body_height_lowering_rate_m_sec': '0.18',
             'quick_reset_max_velocity_deg_sec': '35.1',
             'quick_reset_max_acceleration_deg_sec2': '146.25',
             'quick_reset_max_jerk_deg_sec3': '1096.875',
@@ -79,7 +83,7 @@ def generate_launch_description():
             'quick_reset_neck_max_jerk_deg_sec3': '1406.25',
             # ~/vr306nav reset/head-follow neutral looks down 20 degrees.
             # The standalone ~/vr306 launch keeps its original zero target.
-            'quick_reset_neck_joints': '[0.0, -20.0, 0.0]',
+            'quick_reset_neck_joints': '[0.010928,-29.998649,0.010928]',
             'head_neutral_joints_deg': '[0.0, -20.0, 0.0]',
             # Every hardware-enable and X+A reset ends with the neck held.
             # The operator explicitly hands head motion back with VR button B.
@@ -122,6 +126,8 @@ def generate_launch_description():
             '-p', ['host:=', web_host],
             '-p', ['https_port:=', web_port],
             '-p', ['rgbd_camera_enabled:=', navigation_rgbd_camera_enabled],
+            '-p', ['travel_head_pose_enabled:=', travel_head_pose_enabled],
+            '-p', ['travel_head_pitch_deg:=', travel_head_pitch_deg],
         ],
         output='screen',
     )
@@ -141,8 +147,8 @@ def generate_launch_description():
             '-p', 'side_margin_m:=0.05',
             '-p', 'latency_compensation_seconds:=0.10',
             '-p', 'maximum_preview_heading_degrees:=22.0',
-            '-p', 'front_laser_topic:=/topic_gv_front_lidar_0_307',
-            '-p', 'rear_laser_topic:=/topic_gv_rear_lidar_0_307',
+            '-p', 'front_laser_topic:=/topic_gv_front_lidar_0_283',
+            '-p', 'rear_laser_topic:=/topic_gv_rear_lidar_0_283',
             '-p', 'chassis_length_m:=0.60',
             '-p', 'chassis_width_m:=0.60',
             '-p', 'laser_maximum_range_m:=1.50',
@@ -175,6 +181,22 @@ def generate_launch_description():
         output='screen',
     )
 
+    # Front-lidar safety announcement for the whole VR session (automatic
+    # navigation and manual thumbstick driving). Publishes on the VR task
+    # speech topic so it uses the same local player as the other prompts.
+    proximity_alert = ExecuteProcess(
+        cmd=[
+            robot_env_python,
+            '-m', 'openarmx_teleop_vr_navigation_306.proximity_alert_node',
+            '--ros-args',
+            '-p', 'enabled:=true',
+            '-p', ['front_scan_topic:=/topic_gv_front_lidar_', topic_suffix],
+            '-p', 'tts_topic:=/openarmx_teleop_vr_navigation_306/task_speech',
+        ],
+        condition=IfCondition(proximity_alert_enabled),
+        output='screen',
+    )
+
     voice_mode_router = ExecuteProcess(
         cmd=[
             robot_env_python,
@@ -185,7 +207,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        DeclareLaunchArgument('topic_suffix', default_value='0_307'),
+        DeclareLaunchArgument('topic_suffix', default_value='0_283'),
         DeclareLaunchArgument('dry_run', default_value='true'),
         DeclareLaunchArgument('web_host', default_value='0.0.0.0'),
         DeclareLaunchArgument('web_port', default_value='8445'),
@@ -196,9 +218,12 @@ def generate_launch_description():
         DeclareLaunchArgument('corridor_projection_enabled', default_value='true'),
         DeclareLaunchArgument('task_voice_enabled', default_value='true'),
         DeclareLaunchArgument('task_voice_port', default_value='8766'),
+        DeclareLaunchArgument('proximity_alert_enabled', default_value='true'),
+        DeclareLaunchArgument('travel_head_pose_enabled', default_value='false'),
+        DeclareLaunchArgument('travel_head_pitch_deg', default_value='10.0'),
         DeclareLaunchArgument(
             'robot_env_python',
-            default_value='/home/ubuntu/miniconda3/envs/robot_env/bin/python',
+            default_value='/home/ubuntu/ros2_ws/venvs/openarmx_v4_placo/bin/python',
         ),
         navigation,
         voice_mode_router,
@@ -207,4 +232,5 @@ def generate_launch_description():
         web_bridge,
         task_voice,
         task_speech,
+        proximity_alert,
     ])

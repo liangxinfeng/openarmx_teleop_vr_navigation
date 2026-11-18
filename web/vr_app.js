@@ -13,7 +13,21 @@ function getClientInstanceId() {
   }
 }
 
+function explicitExitFlag(value) {
+  const url = new URL(window.location.href);
+  if (value !== undefined) {
+    if (value) url.searchParams.set('vr_idle', '1');
+    else url.searchParams.delete('vr_idle');
+    window.history.replaceState(null, '', url);
+  }
+  try {
+    if (value !== undefined) window.sessionStorage.setItem('vr-explicitly-exited', value ? 'yes' : 'no');
+    return url.searchParams.has('vr_idle') || window.sessionStorage.getItem('vr-explicitly-exited') === 'yes';
+  } catch (_) { return url.searchParams.has('vr_idle'); }
+}
+
 const state = {
+  controlRequested: !explicitExitFlag(),
   config: null,
   clientInstanceId: getClientInstanceId(),
   websocket: null,
@@ -167,6 +181,7 @@ function setServerUrl() {
 }
 
 function hardwareControlIsOnOrBusy() {
+  if (!state.controlRequested) return false;
   const teleop = state.teleop.status;
   const backendState = String(teleop?.state || '').toLowerCase();
   return Boolean(
@@ -298,6 +313,17 @@ function renderHardwareControl() {
   const waistToggle = document.getElementById('waistFollowToggle');
   const headToggle = document.getElementById('headFollowToggle');
   if (!card || !label || !detail || !button) return;
+
+  if (!state.controlRequested) {
+    card.classList.remove('is-busy', 'is-on', 'is-error');
+    card.classList.add('is-off');
+    button.classList.remove('is-disable-action');
+    label.textContent = '已退出VR遥操';
+    detail.textContent = '当前头显已释放接管；可长按重新进入，也可换其他头显。';
+    setHardwareButtonText(button, '按住 1 秒，复位到遥操准备姿态');
+    button.disabled = !state.teleop.available || Boolean(state.teleop.status?.dry_run);
+    return;
+  }
 
   card.classList.remove('is-off', 'is-busy', 'is-on', 'is-error');
   button.classList.remove('is-disable-action');
@@ -468,21 +494,10 @@ async function refreshHardwareStatus() {
       );
     }
     state.teleop.lastHeadRecalibrationRequired = headRecalibrationRequired;
-    const quickResetActive = state.teleop.status?.quick_reset?.active === true;
-    if (
-      state.xrSession
-      && state.teleop.lastQuickResetActive !== null
-      && state.teleop.lastQuickResetActive !== quickResetActive
-    ) {
-      showVrNotice(
-        quickResetActive
-          ? '正在快速复位\n请松开左右腰键'
-          : '快速复位完成\n松开再按腰键，当前身体朝向将自动设为新前方',
-        quickResetActive ? 3000 : 5000,
-        quickResetActive ? '#FFD166' : '#7DFFCF'
-      );
-    }
-    state.teleop.lastQuickResetActive = quickResetActive;
+    globalThis.autolifeResetControls?.updateStatus(state.teleop.status, {
+      fresh: payload.teleopStatusFresh === true,
+      xrActive: Boolean(state.xrSession)
+    });
     const desktop = state.teleop.status?.desktop_mode;
     const desktopReady = desktop?.enabled === true && desktop?.ready === true;
     if (desktop?.enabled === true) {
@@ -509,6 +524,7 @@ async function refreshHardwareStatus() {
     state.teleop.xrPoseFresh = false;
     state.teleop.desktopModeAvailable = false;
     state.teleop.status = null;
+    globalThis.autolifeResetControls?.updateStatus(null, {fresh:false, xrActive:Boolean(state.xrSession)});
     state.teleop.lastRequestMessage = `状态读取失败：${error.message}`;
   } finally {
     window.clearTimeout(timeout);
@@ -530,13 +546,14 @@ async function maybeEnableAfterFreshVr() {
     renderHardwareControl();
     return;
   }
-  if (!vrInputIsFresh()) return;
+  if (state.websocket?.readyState !== WebSocket.OPEN || !vrInputIsFresh()) return;
   cancelDeferredHardwareEnable('已检测到实时 VR 手柄，正在执行安全使能。');
   await requestHardwareEnabled(true);
 }
 
 async function requestHardwareEnabled(enabled) {
   if (state.teleop.requestPending) return;
+  if (enabled && state.websocket?.readyState !== WebSocket.OPEN) return;
   if (!enabled) cancelDeferredHardwareEnable();
   state.teleop.requestPending = true;
   state.teleop.lastRequestMessage = '';
@@ -547,6 +564,7 @@ async function requestHardwareEnabled(enabled) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         enabled,
+        client_id: state.clientInstanceId,
         waist_follow_enabled: enabled
           ? Boolean(document.getElementById('waistFollowToggle')?.checked)
           : undefined,
@@ -725,7 +743,7 @@ function finishHardwareEnableHold(event) {
   cancelHardwareEnableHold();
   if (!confirmed) return;
   if (event) event.preventDefault();
-  if (vrInputIsFresh()) {
+  if (state.websocket?.readyState === WebSocket.OPEN && vrInputIsFresh()) {
     cancelDeferredHardwareEnable('已检测到实时 VR 手柄，正在执行安全使能。');
     void requestHardwareEnabled(true);
     return;
@@ -743,6 +761,12 @@ function beginHardwareEnableHold(event) {
     || state.teleop.enableAfterFreshVr
   ) return;
   event.preventDefault();
+  if (!state.controlRequested) {
+    state.controlRequested = true;
+    explicitExitFlag(false);
+    connectWebSocket();
+    window.dispatchEvent(new Event('vr-control-requested'));
+  }
   if (state.teleop.holdTimer !== null) return;
   state.teleop.holdTriggered = false;
   button.classList.remove('is-holding');
@@ -828,6 +852,7 @@ function websocketUrl() {
 }
 
 function connectWebSocket() {
+  if (!state.controlRequested) return;
   if (state.websocket && [WebSocket.CONNECTING, WebSocket.OPEN].includes(state.websocket.readyState)) return;
   const url = websocketUrl();
   const websocket = new WebSocket(url);
@@ -849,6 +874,7 @@ function connectWebSocket() {
     if (state.websocket !== websocket) return;
     state.websocket = null;
     closeRealtimeChannel();
+    if (!state.controlRequested) return;
     setStatus('VR data disconnected; reconnecting...');
     state.teleop.lastRequestMessage = 'VR 数据连接暂时中断，机器人保持当前位置；正在自动重连。';
     renderHardwareControl();
@@ -860,6 +886,27 @@ function connectWebSocket() {
     }
   };
 }
+
+globalThis.autolifeVrControlRequested = () => state.controlRequested;
+globalThis.autolifeVrClientId = () => state.clientInstanceId;
+globalThis.autolifeExitVrSession = async () => {
+  if (state.teleop.requestPending) throw new Error('使能请求正在处理中，请先等待完成或取消');
+  cancelDeferredHardwareEnable();
+  const response = await fetch('/api/session/exit', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({client_id: state.clientInstanceId})
+  });
+  const result = await response.json();
+  if (!response.ok || !result.success) throw new Error(result.message || '安全退出未完成');
+  state.controlRequested = false;
+  explicitExitFlag(true);
+  if (state.reconnectTimer) window.clearTimeout(state.reconnectTimer);
+  state.reconnectTimer = null;
+  closeRealtimeChannel();
+  state.websocket?.close();
+  try { await document.querySelector('a-scene')?.exitVR(); } catch (_) {}
+  window.location.reload();
+};
 
 function scheduleRealtimeReconnect() {
   if (
@@ -1071,6 +1118,8 @@ async function connectRealtimeChannel() {
 }
 
 function sendRealtimePacket(payload) {
+  payload = globalThis.autolifeResetControls?.filterPacket(payload) || payload;
+  payload = globalThis.autolifeHotelControls?.filterPacket(payload) || payload;
   payload.sequence = ++state.realtimeSequence;
   if (!payload.timestamp) payload.timestamp = Date.now();
   const encoded = JSON.stringify(payload);
@@ -2123,6 +2172,11 @@ function controllerData(handEl, hand, buttons, webxrPose = null) {
     return payload;
   }
 
+  // During an immersive session, never reuse a stale A-Frame controller pose
+  // after WebXR has removed the corresponding input source.  The generic
+  // tracker fallback below is only for the desktop/non-XR preview.
+  if (state.xrSession) return payload;
+
   if (!handEl?.object3D?.visible) return payload;
 
   const pos = handEl.object3D.position;
@@ -2137,6 +2191,29 @@ function controllerData(handEl, hand, buttons, webxrPose = null) {
   };
   payload.quaternion = { x: quat.x, y: quat.y, z: quat.z, w: quat.w };
   return payload;
+}
+
+function object3DWorldPose(object3D) {
+  if (!object3D?.visible) return null;
+  const position = new THREE.Vector3();
+  const quaternion = new THREE.Quaternion();
+  object3D.getWorldPosition(position);
+  object3D.getWorldQuaternion(quaternion);
+  const euler = new THREE.Euler().setFromQuaternion(quaternion, 'XYZ');
+  return {
+    position: { x: position.x, y: position.y, z: position.z },
+    rotation: {
+      x: THREE.MathUtils.radToDeg(euler.x),
+      y: THREE.MathUtils.radToDeg(euler.y),
+      z: THREE.MathUtils.radToDeg(euler.z)
+    },
+    quaternion: {
+      x: quaternion.x,
+      y: quaternion.y,
+      z: quaternion.z,
+      w: quaternion.w
+    }
+  };
 }
 
 AFRAME.registerComponent('telegrip-vr-bridge', {
@@ -2191,6 +2268,8 @@ AFRAME.registerComponent('telegrip-vr-bridge', {
   },
 
   sendButtonEvent: function (hand, button, pressed) {
+    if (globalThis.autolifeResetControls?.ownsInput()) return;
+    if (globalThis.autolifeHotelControls?.ownsConfirmation()) return;
     sendReliablePacket({
       type: pressed ? 'button_press' : 'button_release',
       hand,
@@ -2233,6 +2312,10 @@ AFRAME.registerComponent('telegrip-vr-bridge', {
   },
 
   checkDesktopModeGesture: function (tracked) {
+    if (globalThis.autolifeResetControls?.ownsInput() || globalThis.autolifeHotelControls?.ownsConfirmation()) {
+      this.resetDesktopModeChord();
+      return;
+    }
     const bothTracked = Boolean(tracked?.left && tracked?.right);
     const bothPressed = Boolean(
       this.leftButtons.thumbstick?.pressed
@@ -2319,15 +2402,27 @@ AFRAME.registerComponent('telegrip-vr-bridge', {
     }
   },
 
-  updateThumbsticks: function () {
+    updateThumbsticks: function () {
     if (!state.xrSession) return { left: false, right: false };
     const deadzone = 0.05;
     const seen = { left: false, right: false };
 
     for (const source of state.xrSession.inputSources) {
-      if (!source.gamepad || !source.handedness) continue;
+      if (!source.handedness) continue;
       if (source.handedness === 'left' || source.handedness === 'right') {
+        // A hand-tracking source or a controller exposed by a runtime without
+        // the WebXR Gamepads module still has a valid pose.  Count it as
+        // tracked; only button/axis decoding depends on source.gamepad.
         seen[source.handedness] = true;
+      }
+      if (!source.gamepad) {
+        if (source.handedness === 'left') {
+          this.clearControllerButtons(this.leftButtons, 'left');
+        } else if (source.handedness === 'right') {
+          this.clearControllerButtons(this.rightButtons, 'right');
+          this.cameraTogglePressed = false;
+        }
+        continue;
       }
       const axes = source.gamepad.axes || [];
       const buttons = source.gamepad.buttons || [];
@@ -2420,40 +2515,47 @@ AFRAME.registerComponent('telegrip-vr-bridge', {
     return Array.from(state.xrSession.inputSources || []).find(source => source.handedness === hand) || null;
   },
 
-  webxrPoseForHand: function (hand) {
+  webxrPoseForHand: function (hand, handEl) {
     const source = this.inputSourceForHand(hand);
     const frame = this.el.renderer.xr.getFrame?.();
     const referenceSpace = this.el.renderer.xr.getReferenceSpace?.();
-    if (!source || !frame || !referenceSpace) return null;
+    if (!source) return null;
     // Some WebXR runtimes keep gripSpace registered while temporarily
     // returning no grip pose, even though targetRaySpace remains valid.
     // Try both spaces before declaring the controller untracked.
-    const poseSpaces = [source.gripSpace, source.targetRaySpace].filter(Boolean);
-    let pose = null;
-    for (const poseSpace of poseSpaces) {
-      pose = frame.getPose(poseSpace, referenceSpace);
-      if (pose) break;
+    if (frame && referenceSpace) {
+      const poseSpaces = [source.gripSpace, source.targetRaySpace].filter(Boolean);
+      let pose = null;
+      for (const poseSpace of poseSpaces) {
+        pose = frame.getPose(poseSpace, referenceSpace);
+        if (pose) break;
+      }
+      if (pose) {
+        const position = pose.transform.position;
+        const quaternion = pose.transform.orientation;
+        const euler = new THREE.Euler().setFromQuaternion(
+          new THREE.Quaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w),
+          'XYZ'
+        );
+        return {
+          position: { x: position.x, y: position.y, z: position.z },
+          rotation: {
+            x: THREE.MathUtils.radToDeg(euler.x),
+            y: THREE.MathUtils.radToDeg(euler.y),
+            z: THREE.MathUtils.radToDeg(euler.z)
+          },
+          quaternion: { x: quaternion.x, y: quaternion.y, z: quaternion.z, w: quaternion.w }
+        };
+      }
     }
-    if (!pose) return null;
-    const position = pose.transform.position;
-    const quaternion = pose.transform.orientation;
-    const euler = new THREE.Euler().setFromQuaternion(
-      new THREE.Quaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w),
-      'XYZ'
-    );
-    return {
-      position: { x: position.x, y: position.y, z: position.z },
-      rotation: {
-        x: THREE.MathUtils.radToDeg(euler.x),
-        y: THREE.MathUtils.radToDeg(euler.y),
-        z: THREE.MathUtils.radToDeg(euler.z)
-      },
-      quaternion: { x: quaternion.x, y: quaternion.y, z: quaternion.z, w: quaternion.w }
-    };
+    // Generic A-Frame tracked-controls can have a valid world pose even when
+    // a browser temporarily omits gripSpace/targetRaySpace from the XRFrame.
+    // It is safe to use only while the handed input source still exists.
+    return object3DWorldPose(handEl?.object3D);
   },
 
   controllerForHand: function (hand, handEl, buttons) {
-    return controllerData(handEl, hand, buttons, this.webxrPoseForHand(hand));
+    return controllerData(handEl, hand, buttons, this.webxrPoseForHand(hand, handEl));
   },
 
   inputSourceSummary: function () {

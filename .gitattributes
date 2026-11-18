@@ -1,8 +1,0 @@
-* text=auto eol=lf
-*.pkl binary
-*.STL binary
-*.stl binary
-*.png binary
-*.jpg binary
-*.webp binary
-*.tar.gz binary

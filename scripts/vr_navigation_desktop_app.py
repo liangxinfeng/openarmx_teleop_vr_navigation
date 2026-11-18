@@ -10,10 +10,12 @@ from __future__ import annotations
 import argparse
 import fcntl
 import json
+import math
 import os
 from pathlib import Path
 import signal
 import socket
+import ssl
 import subprocess
 import threading
 import time
@@ -28,6 +30,7 @@ from gi.repository import Gdk, GLib, Gtk, WebKit2  # noqa: E402
 
 
 LOGO_URL = "http://127.0.0.1:8088/"
+NAVIGATION_STATE_URL = "https://127.0.0.1:8445/api/navigation/state"
 LOGO_ROOT = Path("/home/ubuntu/ros2_ws/src/autolife_robot_control_center/logo")
 LOGO_SERVER = LOGO_ROOT / "logo_server.py"
 DISPLAY_SCRIPT = LOGO_ROOT / "set_display_mode.sh"
@@ -35,6 +38,32 @@ LOGO_IMAGE = LOGO_ROOT / "yundie.webp"
 LOGO_SERVICE = "autolife-logo-display.service"
 MAIN_LOCK = Path(f"/run/user/{os.getuid()}/openarmx-vr-navigation-306.lock")
 STATE_DIR = Path.home() / ".local/state/autolife-vr-navigation"
+
+
+def battery_colour(percentage, fresh):
+    """347 电量配色：绿 >30%、黄 ≤30%、红 ≤15%、过期/无数据琥珀。"""
+    if not fresh or percentage is None:
+        return "#ffcf70"
+    if percentage <= 15:
+        return "#ff625d"
+    if percentage <= 30:
+        return "#ffd166"
+    return "#72f0b1"
+
+
+def gdk_rgba(hex_colour):
+    rgba = Gdk.RGBA()
+    rgba.parse(hex_colour)
+    return rgba
+
+
+def cairo_round_rect(cr, x, y, width, height, radius):
+    cr.new_sub_path()
+    cr.arc(x + width - radius, y + radius, radius, -math.pi / 2, 0.0)
+    cr.arc(x + width - radius, y + height - radius, radius, 0.0, math.pi / 2)
+    cr.arc(x + radius, y + height - radius, radius, math.pi / 2, math.pi)
+    cr.arc(x + radius, y + radius, radius, math.pi, math.pi * 1.5)
+    cr.close_path()
 
 
 class StartupError(RuntimeError):
@@ -56,6 +85,18 @@ def command(arguments: list[str], *, timeout: float = 12.0) -> subprocess.Comple
 def service_active() -> bool:
     result = command(["systemctl", "--user", "is-active", LOGO_SERVICE])
     return result.stdout.strip() == "active"
+
+
+def check_logo_runtime() -> None:
+    """Check the actual system-Python entry before changing display/services."""
+    try:
+        result = command(["/usr/bin/python3", str(LOGO_SERVER), "--help"], timeout=8.0)
+    except subprocess.TimeoutExpired as error:
+        raise StartupError("Logo 页面依赖检查超时，尚未启动遥操。") from error
+    if result.returncode != 0:
+        detail = "\n".join(result.stdout.strip().splitlines()[-4:])
+        hint = "请安装系统依赖 python3-xlib。" if "No module named 'Xlib'" in detail else "请检查 Logo 服务运行依赖。"
+        raise StartupError(f"Logo 页面启动检查失败：{hint}\n{detail}")
 
 
 def port_available(host: str = "127.0.0.1", port: int = 8088) -> bool:
@@ -134,6 +175,11 @@ class VrNavigationDesktopApp:
         self.stack_process: subprocess.Popen | None = None
         self.log_handle = None
         self.lock_handle = None
+        self.battery_stop = threading.Event()
+        self.battery_thread: threading.Thread | None = None
+        self._battery_text = ""
+        self._battery_percentage_shown = None
+        self._battery_charging = False
         self._acquire_app_lock()
         self._build_window()
         threading.Thread(target=self._startup_worker, daemon=True).start()
@@ -175,6 +221,12 @@ class VrNavigationDesktopApp:
             }
             .window-control:hover { background: rgba(23, 112, 155, 0.75); }
             #close-control:hover { background: rgba(174, 44, 61, 0.85); }
+            #battery-chip {
+                background: rgba(5, 14, 24, 0.78);
+                border: 1px solid rgba(110, 205, 255, 0.25);
+                border-radius: 14px; padding: 7px 12px;
+            }
+            #battery-chip label { font-size: 16px; font-weight: bold; }
             """
         )
         Gtk.StyleContext.add_provider_for_screen(
@@ -220,6 +272,16 @@ class VrNavigationDesktopApp:
         controls.set_valign(Gtk.Align.START)
         controls.set_margin_top(10)
         controls.set_margin_end(10)
+        self.battery_chip = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        self.battery_chip.set_name("battery-chip")
+        self.battery_chip.set_valign(Gtk.Align.CENTER)
+        self.battery_icon = Gtk.DrawingArea()
+        self.battery_icon.set_size_request(40, 22)
+        self.battery_icon.connect("draw", self._draw_battery_icon)
+        self.battery_label = Gtk.Label(label="电量：--")
+        self.battery_chip.pack_start(self.battery_icon, False, False, 0)
+        self.battery_chip.pack_start(self.battery_label, False, False, 0)
+        controls.pack_start(self.battery_chip, False, False, 0)
         self.fullscreen_button = Gtk.Button(label="↙")
         self.fullscreen_button.get_style_context().add_class("window-control")
         self.fullscreen_button.set_tooltip_text("退出/进入全屏（F11 或 Esc）")
@@ -247,6 +309,7 @@ class VrNavigationDesktopApp:
     def _startup_worker(self) -> None:
         try:
             check_main_stack_idle()
+            check_logo_runtime()
             self.logo_service_was_active = service_active()
             if self.logo_service_was_active:
                 result = command(
@@ -311,6 +374,12 @@ class VrNavigationDesktopApp:
                 start_new_session=True,
             )
             self.started_stack = True
+            self.battery_thread = threading.Thread(
+                target=self._battery_worker,
+                name="vr-battery-status",
+                daemon=True,
+            )
+            self.battery_thread.start()
             threading.Thread(target=self._watch_stack, daemon=True).start()
         except Exception as error:
             GLib.idle_add(
@@ -323,6 +392,84 @@ class VrNavigationDesktopApp:
     def _show_logo(self) -> bool:
         self.webview.load_uri(LOGO_URL)
         self.stack.set_visible_child_name("logo")
+        return False
+
+    def _battery_worker(self) -> None:
+        """Poll the bridge battery snapshot once per second (347 pattern)."""
+        ssl_context = ssl._create_unverified_context()
+        while not self.battery_stop.is_set():
+            percentage = None
+            charging = False
+            try:
+                with urlopen(
+                    NAVIGATION_STATE_URL, timeout=1.2, context=ssl_context
+                ) as response:
+                    payload = json.loads(response.read().decode("utf-8"))
+                battery = payload.get("battery") or {}
+                if battery.get("fresh") is True:
+                    value = float(battery.get("percentage"))
+                    if 0.0 <= value <= 100.0:
+                        percentage = int(round(value))
+                        charging = bool(battery.get("charging"))
+            except (OSError, TypeError, ValueError, json.JSONDecodeError):
+                percentage = None
+            GLib.idle_add(self._apply_battery, percentage, charging)
+            self.battery_stop.wait(1.0)
+
+    def _apply_battery(self, percentage, charging) -> bool:
+        fresh = percentage is not None
+        text = f"电量：{percentage}%" if fresh else "电量：--"
+        if text != self._battery_text:
+            self._battery_text = text
+            self.battery_label.set_text(text)
+            self.battery_label.override_color(
+                Gtk.StateType.NORMAL,
+                gdk_rgba(battery_colour(percentage, fresh)),
+            )
+        if charging != self._battery_charging or percentage != self._battery_percentage_shown:
+            self._battery_charging = charging
+            self._battery_percentage_shown = percentage
+            self.battery_icon.queue_draw()
+        return False
+
+    def _draw_battery_icon(self, _area, cr) -> bool:
+        allocation = self.battery_icon.get_allocation()
+        width = float(allocation.width)
+        height = float(allocation.height)
+        fresh = self._battery_percentage_shown is not None
+        colour = gdk_rgba(battery_colour(self._battery_percentage_shown, fresh))
+        body_x, body_y = 1.5, 2.0
+        body_w = max(0.0, width - 8.0)
+        body_h = max(0.0, height - 4.0)
+        cap_w, cap_h = 4.0, body_h * 0.44
+        cap_x = body_x + body_w + 1.5
+        cap_y = (height - cap_h) / 2.0
+        cr.set_line_width(2.0)
+        cr.set_source_rgba(colour.red, colour.green, colour.blue, colour.alpha)
+        cairo_round_rect(cr, body_x, body_y, body_w, body_h, 3.0)
+        cr.stroke()
+        cr.rectangle(cap_x, cap_y, cap_w, cap_h)
+        cr.stroke()
+        if fresh:
+            inset = 3.5
+            level = max(0.0, min(100.0, float(self._battery_percentage_shown))) / 100.0
+            fill_w = max(0.0, (body_w - inset * 2.0) * level)
+            if fill_w > 0.0:
+                cr.rectangle(body_x + inset, body_y + inset,
+                             fill_w, body_h - inset * 2.0)
+                cr.fill()
+        if self._battery_charging:
+            bolt = [(0.55, 0.02), (0.20, 0.55), (0.42, 0.55),
+                    (0.32, 0.98), (0.74, 0.38), (0.50, 0.38)]
+            cr.move_to(body_x + bolt[0][0] * body_w, body_y + bolt[0][1] * body_h)
+            for point_x, point_y in bolt[1:]:
+                cr.line_to(body_x + point_x * body_w, body_y + point_y * body_h)
+            cr.close_path()
+            cr.set_source_rgba(1.0, 1.0, 1.0, 1.0)
+            cr.fill_preserve()
+            cr.set_source_rgba(0.0, 0.0, 0.0, 0.55)
+            cr.set_line_width(1.0)
+            cr.stroke()
         return False
 
     def _on_web_load(self, webview, load_event) -> None:
@@ -390,6 +537,7 @@ class VrNavigationDesktopApp:
             return
         self.shutdown_started = True
         self.cancelled.set()
+        self.battery_stop.set()
         self._set_status(
             "正在安全关闭…", "正在停止 ROS 节点并恢复显示设置，请稍候"
         )
@@ -425,19 +573,26 @@ def validate(robot_id: str, entry: Path) -> int:
         "logo_image": LOGO_IMAGE,
     }
     missing = [name for name, path in paths.items() if not path.is_file()]
+    errors = []
+    if not missing:
+        try:
+            check_logo_runtime()
+        except StartupError as error:
+            errors.append(str(error))
     print(
         json.dumps(
             {
-                "success": not missing,
+                "success": not missing and not errors,
                 "robot_id": robot_id,
                 "webkit": "WebKit2 4.1",
                 "entry": str(entry),
                 "missing": missing,
+                "errors": errors,
             },
             ensure_ascii=False,
         )
     )
-    return 0 if not missing else 2
+    return 0 if not missing and not errors else 2
 
 
 def main() -> int:

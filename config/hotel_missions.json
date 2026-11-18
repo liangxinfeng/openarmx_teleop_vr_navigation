@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "record_root": "~/Documents/sushi_task_records",
+  "recognition": {"provider": "disabled"},
+  "missions": [
+    {
+      "id": "hotel_public_garbage_patrol_v1",
+      "name": "酒店公区巡查",
+      "task_type": "hotel_public_garbage_patrol",
+      "source_chain": "酒店公区巡查",
+      "require_start_confirmation": true,
+      "pickup": {"waypoint": "前台", "task": "取垃圾篮"},
+      "start_waypoint": "充电桩",
+      "return_waypoint": "充电桩",
+      "voice": {
+        "leg_announcement": "我正在执行桌面物品收拾的任务，请注意安全"
+      },
+      "basket": {
+        "carrier_hand": "left",
+        "grasp_hand": "right",
+        "capacity_mode": "operator_confirm"
+      },
+      "areas": [
+        {
+          "id": "round_table_1",
+          "name": "圆桌1",
+          "waypoint": "桌子1",
+          "required": true,
+          "allowed_items": ["water_bottle", "water_cup", "tissue", "paper", "other"]
+        },
+        {
+          "id": "round_table_2",
+          "name": "圆桌2",
+          "waypoint": "桌子2",
+          "required": true,
+          "allowed_items": ["water_bottle", "water_cup", "tissue", "paper", "other"]
+        },
+        {
+          "id": "round_table_3",
+          "name": "圆桌3",
+          "waypoint": "桌子3",
+          "required": true,
+          "allowed_items": ["water_bottle", "water_cup", "tissue", "paper", "other"]
+        },
+        {
+          "id": "round_table_4",
+          "name": "圆桌4",
+          "waypoint": "桌子4",
+          "required": true,
+          "allowed_items": ["water_bottle", "water_cup", "tissue", "paper", "other"]
+        }
+      ],
+      "trash_bin": {
+        "waypoint": "垃圾桶",
+        "task": "丢垃圾",
+        "resume_policy": "resume_current_or_next"
+      }
+    }
+  ]
+}
