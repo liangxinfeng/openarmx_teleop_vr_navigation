@@ -109,6 +109,9 @@ fi
 
 START_NAVIGATION_STACK=true
 GV_STATE="$(systemctl --user is-active "$GV_SERVICE" 2>/dev/null || true)"
+if [ "$(systemctl --user show "$GV_SERVICE" -p LoadState --value 2>/dev/null || true)" = "not-found" ]; then
+  GV_STATE=inactive
+fi
 if [ "$GV_STATE" = 'active' ]; then
   GV_WAS_ACTIVE=1
   printf '[1/2] 正在暂停厂商 SLAM/定位，避免两套 map → odom 冲突…\n'

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=VR遥操导航
+Comment=367本机适配，来源345 20261117版本
+Exec=/home/ubuntu/migration367_20261118/bin/vr_navigation
+Path=/home/ubuntu/migration367_20261118
+Terminal=false
+Icon=applications-engineering
+Categories=Robotics;

@@ -4,6 +4,7 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
+from control_center_module_lease import controller_lease
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -145,8 +146,8 @@ def generate_launch_description():
             '-p', 'side_margin_m:=0.05',
             '-p', 'latency_compensation_seconds:=0.10',
             '-p', 'maximum_preview_heading_degrees:=22.0',
-            '-p', 'front_laser_topic:=/topic_gv_front_lidar_0_345',
-            '-p', 'rear_laser_topic:=/topic_gv_rear_lidar_0_345',
+            '-p', 'front_laser_topic:=/topic_gv_front_lidar_0_367',
+            '-p', 'rear_laser_topic:=/topic_gv_rear_lidar_0_367',
             '-p', 'chassis_length_m:=0.60',
             '-p', 'chassis_width_m:=0.60',
             '-p', 'laser_maximum_range_m:=1.50',
@@ -189,7 +190,8 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        DeclareLaunchArgument('topic_suffix', default_value='0_345'),
+        controller_lease('vr_stack'),
+        DeclareLaunchArgument('topic_suffix', default_value='0_367'),
         DeclareLaunchArgument('ros_domain_id', default_value='0'),
         DeclareLaunchArgument('dry_run', default_value='true'),
         DeclareLaunchArgument('web_host', default_value='0.0.0.0'),
@@ -203,7 +205,7 @@ def generate_launch_description():
         DeclareLaunchArgument('task_voice_port', default_value='8766'),
         DeclareLaunchArgument(
             'robot_env_python',
-            default_value='/home/ubuntu/ros2_ws/venvs/openarmx_v4_placo/bin/python',
+            default_value='/home/ubuntu/migration367_20261118/runtime/bin/python',
         ),
         navigation,
         voice_mode_router,

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -e
+if [[ -L "/home/ubuntu/migration367_20261118/releases/control-center-current" ]]; then
+  exec "/home/ubuntu/migration367_20261118/releases/control-center-current/bin/vr_navigation" "$@"
+fi
+exec "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/backup/bin/vr_navigation" "$@"

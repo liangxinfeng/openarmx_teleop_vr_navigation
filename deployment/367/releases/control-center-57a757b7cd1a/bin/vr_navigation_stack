@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -e
+source /home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/environment.sh
+cd /home/ubuntu/migration367_20261118
+exec python -m control_center_module_lease run vr_stack bash /home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/bin/start_vr_navigation_306.sh

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/home/ubuntu/migration367_20261118/runtime/bin/python
 """Native GTK shell for the VR teleoperation/navigation stack.
 
 It embeds the existing chest-screen Logo page, owns the ROS launch process,
@@ -165,7 +165,7 @@ def service_active() -> bool:
 def check_logo_runtime() -> None:
     """Check the actual system-Python entry before changing display/services."""
     try:
-        result = command(["/usr/bin/python3", str(LOGO_SERVER), "--help"], timeout=8.0)
+        result = command(['/home/ubuntu/migration367_20261118/runtime/bin/python', str(LOGO_SERVER), "--help"], timeout=8.0)
     except subprocess.TimeoutExpired as error:
         raise StartupError("Logo 页面依赖检查超时，尚未启动遥操。") from error
     if result.returncode != 0:
@@ -394,7 +394,7 @@ class VrNavigationDesktopApp:
             logo_log = (STATE_DIR / f"logo-{self.robot_id}.log").open("ab", buffering=0)
             self.logo_process = subprocess.Popen(
                 [
-                    "/usr/bin/python3",
+                    '/home/ubuntu/migration367_20261118/runtime/bin/python',
                     str(LOGO_SERVER),
                     "--host", "127.0.0.1",
                     "--port", "8088",

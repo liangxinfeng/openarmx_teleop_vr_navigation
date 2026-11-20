@@ -143,7 +143,7 @@ class NavigationVrWebBridge(VrWebBridge):
         self._navigation_ready = threading.Event()
         super().__init__()
 
-        self.declare_parameter('teaching_topic_suffix', '0_345')
+        self.declare_parameter('teaching_topic_suffix', '0_367')
 
         self.declare_parameter('manual_cmd_vel_topic', '/manual_cmd_vel')
         self.declare_parameter('depth_cloud_minimum_m', 0.20)
@@ -190,11 +190,11 @@ class NavigationVrWebBridge(VrWebBridge):
         )
         self.declare_parameter(
             'left_gripper_force_ratio_topic',
-            '/control_set_left_gripper_force_ratio_0_345',
+            '/control_set_left_gripper_force_ratio_0_367',
         )
         self.declare_parameter(
             'right_gripper_force_ratio_topic',
-            '/control_set_right_gripper_force_ratio_0_345',
+            '/control_set_right_gripper_force_ratio_0_367',
         )
         self.declare_parameter('gripper_force_minimum_ratio', 0.0)
         self.declare_parameter('gripper_force_maximum_current', 10.0)

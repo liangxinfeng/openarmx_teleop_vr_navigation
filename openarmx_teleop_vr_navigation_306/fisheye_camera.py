@@ -56,6 +56,7 @@ class FisheyeCamera:
         self._jpeg = None
         self._version = 0
         self._published_ns = 0
+        self._width, self._height = 640, 360
         self._received_at = 0.0
         self._times = deque(maxlen=30)
         self._error = ''
@@ -115,7 +116,7 @@ class FisheyeCamera:
             fps = ((len(times) - 1) / (times[-1] - times[0])
                    if online and len(times) > 1 and times[-1] > times[0] else 0)
             return {'image_key': self._image_key, 'name': self._label,
-                    'online': online, 'width': 640, 'height': 360,
+                    'online': online, 'width': self._width, 'height': self._height,
                     'fps': round(fps, 2), 'target_fps': self.maximum_fps,
                     'frame_version': self._version,
                     'frame_age': None if age is None else round(age, 3),
@@ -140,7 +141,10 @@ class FisheyeCamera:
     def _open_consumer(self):
         if self._factory is not None:
             return self._factory()
-        from autolife_robot_sdk.utils import list_camera_shm_outputs, open_camera_shm_consumer
+        try:
+            from autolife_robot_sdk.utils import list_camera_shm_outputs, open_camera_shm_consumer
+        except ImportError:
+            from autolife_v3_camera import list_camera_shm_outputs, open_camera_shm_consumer
         matches = [o for o in list_camera_shm_outputs(
             'autolife_s1', 'robot_v3_1', module_name=self._module_name)
                    if str(o.output_name).upper() == 'JPEG']
@@ -180,18 +184,20 @@ class FisheyeCamera:
                     last_received = now
                     if now + 0.002 < next_emit:
                         continue
-                    if (int(meta.get('width', 0)), int(meta.get('height', 0))) != (640, 360):
-                        raise ValueError('fisheye source must be native 640x360')
+                    dimensions = (int(meta.get('width', 0)), int(meta.get('height', 0)))
+                    if min(dimensions) <= 0:
+                        raise ValueError('fisheye source geometry missing')
                     if str(meta.get('pixel_format_str', '')).upper() not in ('MJPG', 'JPEG'):
                         raise ValueError('fisheye source must be JPEG')
                     jpeg = bytes(raw)
-                    if not 128 <= len(jpeg) <= 512 * 1024 or jpeg_size(jpeg) != (640, 360):
+                    if not 128 <= len(jpeg) <= 4 * 1024 * 1024 or jpeg_size(jpeg) != dimensions:
                         raise ValueError('invalid native JPEG payload')
                     next_emit = next_emit + interval if next_emit else now + interval
                     if next_emit < now - interval:
                         next_emit = now + interval
                     with self._condition:
                         self._jpeg = jpeg
+                        self._width, self._height = dimensions
                         self._version += 1
                         self._published_ns = published
                         self._received_at = now

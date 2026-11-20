@@ -200,7 +200,7 @@ def directional_obstacle_clearances(
 class CorridorProjectionNode(Node):
     def __init__(self):
         super().__init__('vr_corridor_projection_306')
-        self.declare_parameter('topic_suffix', '0_345')
+        self.declare_parameter('topic_suffix', '0_367')
         self.declare_parameter('output_topic', '/vr_navigation/corridor_projection')
         self.declare_parameter('manual_cmd_vel_topic', '/manual_cmd_vel')
         self.declare_parameter('navigation_cmd_vel_topic', '/nav_cmd_vel')
@@ -217,8 +217,8 @@ class CorridorProjectionNode(Node):
         self.declare_parameter('depth_stale_seconds', 0.25)
         self.declare_parameter('joint_stale_seconds', 0.40)
         self.declare_parameter('obstacle_clearance_m', 0.16)
-        self.declare_parameter('front_laser_topic', '/topic_gv_front_lidar_0_345')
-        self.declare_parameter('rear_laser_topic', '/topic_gv_rear_lidar_0_345')
+        self.declare_parameter('front_laser_topic', '/topic_gv_front_lidar_0_367')
+        self.declare_parameter('rear_laser_topic', '/topic_gv_rear_lidar_0_367')
         self.declare_parameter('laser_stale_seconds', 0.40)
         self.declare_parameter('laser_maximum_range_m', 1.50)
         self.declare_parameter('obstacle_update_rate_hz', 12.5)
@@ -410,10 +410,10 @@ class CorridorProjectionNode(Node):
             return
         self._next_camera_open_at = now + 2.0
         try:
-            from autolife_robot_sdk.utils.camera_shm_catalog import (
-                get_camera_shm_output,
-                open_camera_shm_consumer,
-            )
+            try:
+                from autolife_robot_sdk.utils.camera_shm_catalog import get_camera_shm_output, open_camera_shm_consumer
+            except ImportError:
+                from autolife_v3_camera import get_camera_shm_output, open_camera_shm_consumer
             output = get_camera_shm_output('mod_camera_rgbd_head', 'depth')
             self._depth_consumer = open_camera_shm_consumer(
                 output, name='vr_corridor_projection_306'

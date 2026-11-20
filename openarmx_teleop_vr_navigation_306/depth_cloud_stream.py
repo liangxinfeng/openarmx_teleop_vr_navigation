@@ -145,10 +145,12 @@ class DepthCloudStream:
     def _open_consumers(self):
         import numpy as np
 
-        from autolife_robot_sdk.utils.camera_shm_catalog import (
-            get_camera_shm_output,
-            open_camera_shm_consumer,
-        )
+        native_v3 = False
+        try:
+            from autolife_robot_sdk.utils.camera_shm_catalog import get_camera_shm_output, open_camera_shm_consumer
+        except ImportError:
+            from autolife_v3_camera import get_camera_shm_output, open_camera_shm_consumer, open_rgbd_pair
+            native_v3 = True
 
         output = get_camera_shm_output(self.module_name, self.output_name)
         consumer = open_camera_shm_consumer(
@@ -224,6 +226,10 @@ class DepthCloudStream:
                 'depth16_rgb565_planes' if self.include_color else 'depth16'
             ),
         }
+        if native_v3 and self.include_color:
+            consumer.close()
+            color_consumer.close()
+            color_consumer, consumer = open_rgbd_pair(module_name=self.module_name, primary='depth')
         with self._condition:
             self._consumer = consumer
             self._color_consumer = color_consumer

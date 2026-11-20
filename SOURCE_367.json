@@ -1,0 +1,652 @@
+{
+ "robot": "autolife-robot-367",
+ "repository": "openarmx_teleop_vr_navigation",
+ "captured_utc": "2026-11-20T04:12:16.518398+00:00",
+ "base_source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306",
+ "control_center_release": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a",
+ "v6_release": "/home/ubuntu/migration367_20261118/releases/teleop-v6-afd1ad40ee86",
+ "files": {
+  ".gitattributes": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/.gitattributes",
+   "sha256": "b297c9a7096638aac8cbbdc3f96a7dce7e40c27ddaf2a60b04ac30dd8376c452",
+   "mode": "644",
+   "size": 114
+  },
+  ".gitignore": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/.gitignore",
+   "sha256": "acde8002dafc59aacd1017ad20f2f67fbde69cef2a20fcf424c60526b5f82ef5",
+   "mode": "644",
+   "size": 201
+  },
+  "DEPENDENCIES_20261117.json": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/DEPENDENCIES_20261117.json",
+   "sha256": "13a1b3e699e3644055535f661567a37272a4a16cefc3b414ad205cb227235296",
+   "mode": "644",
+   "size": 628
+  },
+  "README.md": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/README.md",
+   "sha256": "5f2304036399e8c3367183ee23f109ad5ade443bf92f3def9c1bb6aa6acc71bd",
+   "mode": "644",
+   "size": 1916
+  },
+  "RELEASE_20261117.md": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/RELEASE_20261117.md",
+   "sha256": "f3939e21d5b98971b6e4d1e5b1d9791d05f9015778ce935bb704bda35c5cfdc0",
+   "mode": "644",
+   "size": 2475
+  },
+  "ROBOT300_20261015.md": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/ROBOT300_20261015.md",
+   "sha256": "c11f863f5529d2ce7efc4f5488efcb4f0b7cb39d199b59109d4a68019b7b5ed5",
+   "mode": "644",
+   "size": 920
+  },
+  "SOURCE_SNAPSHOT_20261117.json": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/SOURCE_SNAPSHOT_20261117.json",
+   "sha256": "81830a5e3d263efbd4244eb6e946f4ebf58acd5604de7aa70b0ca49553d2e7db",
+   "mode": "644",
+   "size": 16450
+  },
+  "SYNC_ENABLE_GRIPPER.md": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/SYNC_ENABLE_GRIPPER.md",
+   "sha256": "fdd66f6472bbe89b7c1465564403d69bd8de5656186db39a11129823a673045e",
+   "mode": "644",
+   "size": 950
+  },
+  "TASKS_283.md": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/TASKS_283.md",
+   "sha256": "89f7f0bf60323a0e4d35089bcf4f37d5fe78597f73f6362f2516f43485b051bf",
+   "mode": "644",
+   "size": 1903
+  },
+  "VR_EXIT_SYNC.md": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/VR_EXIT_SYNC.md",
+   "sha256": "08da7a7aa80f81cd45cacdfc729fc792a59f62fba44885cf346b0cf5cb76225f",
+   "mode": "644",
+   "size": 756
+  },
+  "config/delivery_handoff.json": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/config/delivery_handoff.json",
+   "sha256": "1480e8d6c6c385e162bd67eae870616d25f2ff65e0907f6c90ac67d0be562727",
+   "mode": "644",
+   "size": 717
+  },
+  "config/task_actions.json": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/config/task_actions.json",
+   "sha256": "356fda0581776d8f3c6a71bda91167aad72683476e1bb3e1758aab90062e0f9b",
+   "mode": "644",
+   "size": 4257
+  },
+  "config/task_actions.txt": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/config/task_actions.txt",
+   "sha256": "2f31a4be1da16188d778d7d40687af9c864aabc44179c170cd6490f87d6d8427",
+   "mode": "644",
+   "size": 1491
+  },
+  "config/task_actions1.json": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/config/task_actions1.json",
+   "sha256": "a622ba311192ffc475cf6ad002784b384bdc7538966ef8211c17b7569db8eefe",
+   "mode": "644",
+   "size": 2110
+  },
+  "deployment/367/Desktop/VR遥操导航-367.desktop": {
+   "source": "/home/ubuntu/Desktop/VR遥操导航-367.desktop",
+   "sha256": "e93b08822b17395c5271fc6a0a3f9907d2c4b0e954cafd9c487ff479f7e1da41",
+   "mode": "755",
+   "size": 280
+  },
+  "deployment/367/autolife_gui_runtime.py": {
+   "source": "/home/ubuntu/migration367_20261118/autolife_gui_runtime.py",
+   "sha256": "c9055a74ce3f245466aa369e6d97e1620372755a479f140a7b1708032a1d7b5f",
+   "mode": "644",
+   "size": 675
+  },
+  "deployment/367/autolife_v3_camera.py": {
+   "source": "/home/ubuntu/migration367_20261118/autolife_v3_camera.py",
+   "sha256": "dd3160d4abceb4445f522baff843097cfa8cef09bc6160451b3c4da8b7af9df3",
+   "mode": "644",
+   "size": 7972
+  },
+  "deployment/367/base_sources/launch/full_vr_navigation.launch.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/launch/full_vr_navigation.launch.py",
+   "sha256": "10d76b71b3363fd453062be28aa8ecb8f8e9da9c6d27eedc423da21adb1e0aa1",
+   "mode": "644",
+   "size": 9775
+  },
+  "deployment/367/base_sources/scripts/vr_navigation_desktop_app.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/scripts/vr_navigation_desktop_app.py",
+   "sha256": "2f1201579d8ab3aff65c769eace57d19953bed23d84b389fa28172f6c3c8d84f",
+   "mode": "755",
+   "size": 23644
+  },
+  "deployment/367/bin/vr_navigation": {
+   "source": "/home/ubuntu/migration367_20261118/bin/vr_navigation",
+   "sha256": "c766b7d8a635d069f5e99ae816e17c49a4b6420a080ad5490f841e12e11d809b",
+   "mode": "755",
+   "size": 325
+  },
+  "deployment/367/bin/vr_navigation_stack": {
+   "source": "/home/ubuntu/migration367_20261118/bin/vr_navigation_stack",
+   "sha256": "13268b869c59f9eeaafed2b0b5837063779a99fbc4512fcd8c47dd729978d06e",
+   "mode": "755",
+   "size": 337
+  },
+  "deployment/367/dependencies.lock": {
+   "source": "/home/ubuntu/migration367_20261118/dependencies.lock",
+   "sha256": "1c331fcb55b2e516834584ffc849440f171fb2b34a44239edbfbf4fefa35872d",
+   "mode": "644",
+   "size": 438
+  },
+  "deployment/367/dependency_manifest.json": {
+   "source": "/home/ubuntu/migration367_20261118/dependency_manifest.json",
+   "sha256": "f1393f86dc51a5c4217d099a5898019896a99ae2c49461398c48f290e9665557",
+   "mode": "644",
+   "size": 390
+  },
+  "deployment/367/environment.sh": {
+   "source": "/home/ubuntu/migration367_20261118/environment.sh",
+   "sha256": "44c065b24399e76bf0bed144f5019823c7d73002ee49e035b4ad0d6ad1601942",
+   "mode": "644",
+   "size": 3756
+  },
+  "deployment/367/releases/control-center-57a757b7cd1a/bin/start_vr_navigation_306.sh": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/bin/start_vr_navigation_306.sh",
+   "sha256": "d692434d0f32b4eaa2497af57c2e602f59296892fcab47c02bf5c7abc94914cd",
+   "mode": "644",
+   "size": 7651
+  },
+  "deployment/367/releases/control-center-57a757b7cd1a/bin/vr_navigation": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/bin/vr_navigation",
+   "sha256": "ad0b6abc0483cb51e722c7696cf576ecf684f75266fcfdec6c2cc39a4d875b70",
+   "mode": "755",
+   "size": 367
+  },
+  "deployment/367/releases/control-center-57a757b7cd1a/bin/vr_navigation_stack": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/bin/vr_navigation_stack",
+   "sha256": "5d5d96a780f75f1659e41e49709d5268bda0134162fc2067fc9be1a45ac5a955",
+   "mode": "755",
+   "size": 323
+  },
+  "deployment/367/releases/control-center-57a757b7cd1a/control_center_module_lease.py": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/control_center_module_lease.py",
+   "sha256": "39e7753657d9fd70c112a0ef88cc1222e16b0c631fd2abd9c40ca8b44591e3a7",
+   "mode": "644",
+   "size": 8217
+  },
+  "deployment/367/releases/control-center-57a757b7cd1a/entries/openarmx_teleop_vr_navigation_306/launch/full_vr_navigation.launch.py": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/entries/openarmx_teleop_vr_navigation_306/launch/full_vr_navigation.launch.py",
+   "sha256": "0ae5a3b2fb816bb5138f0bbea7045749e2e08e2a697db64cea789f5fe1a69675",
+   "mode": "644",
+   "size": 9870
+  },
+  "deployment/367/releases/control-center-57a757b7cd1a/environment.sh": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/environment.sh",
+   "sha256": "9633bc7f98d57b7628d02779093c02c0f1d4f200c7945a64053cc14126a498b0",
+   "mode": "644",
+   "size": 151
+  },
+  "deployment/367/releases/control-center-57a757b7cd1a/overlay.sh": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay.sh",
+   "sha256": "30884fa70eb14ee3778281a8c8cc4ef9f5813e87acfb2034b89e0329f9dbd474",
+   "mode": "644",
+   "size": 889
+  },
+  "launch/full_vr_navigation.launch.py": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/launch/full_vr_navigation.launch.py",
+   "sha256": "0ae5a3b2fb816bb5138f0bbea7045749e2e08e2a697db64cea789f5fe1a69675",
+   "mode": "644",
+   "size": 9870
+  },
+  "openarmx_teleop_vr_navigation_306/__init__.py": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/python3.12/site-packages/openarmx_teleop_vr_navigation_306/__init__.py",
+   "sha256": "6e3b29d72974da7844d2c69885d39500dcd91b3f136cea4a433f6fcf6048cde2",
+   "mode": "644",
+   "size": 78
+  },
+  "openarmx_teleop_vr_navigation_306/corridor_projection_node.py": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/python3.12/site-packages/openarmx_teleop_vr_navigation_306/corridor_projection_node.py",
+   "sha256": "eb2a0ceda52d3e441ce28ca9659dac4c6d863e54afdadb1e9cd4e4d6aa11e0c6",
+   "mode": "644",
+   "size": 26542
+  },
+  "openarmx_teleop_vr_navigation_306/delivery_handoff.py": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/python3.12/site-packages/openarmx_teleop_vr_navigation_306/delivery_handoff.py",
+   "sha256": "65c4293bf45a8d9988e998a28210df51df1a66f2715823d29b9d1081bb49d8e0",
+   "mode": "644",
+   "size": 35827
+  },
+  "openarmx_teleop_vr_navigation_306/depth_cloud_stream.py": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/python3.12/site-packages/openarmx_teleop_vr_navigation_306/depth_cloud_stream.py",
+   "sha256": "741c74e06111f82e1de656798df8c7e5f29ad295f35ec00a767efe7570665027",
+   "mode": "644",
+   "size": 15996
+  },
+  "openarmx_teleop_vr_navigation_306/fisheye_camera.py": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/python3.12/site-packages/openarmx_teleop_vr_navigation_306/fisheye_camera.py",
+   "sha256": "3636b18bc78f2802282255fe2e183a39189d06dcac88bfd740e1bb05fbafd581",
+   "mode": "644",
+   "size": 12176
+  },
+  "openarmx_teleop_vr_navigation_306/fisheye_profile.py": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/python3.12/site-packages/openarmx_teleop_vr_navigation_306/fisheye_profile.py",
+   "sha256": "30285f6246425889663bbf6b28a102bc412994b2a48e654750ed257bf86d99c4",
+   "mode": "644",
+   "size": 7469
+  },
+  "openarmx_teleop_vr_navigation_306/navigation_web_bridge.py": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/python3.12/site-packages/openarmx_teleop_vr_navigation_306/navigation_web_bridge.py",
+   "sha256": "1f6aabf2408c52e081cbdbfd3a434acf508c9268bde627bf7a22d0ef30a1f8c7",
+   "mode": "644",
+   "size": 160759
+  },
+  "openarmx_teleop_vr_navigation_306/session_controls.py": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/python3.12/site-packages/openarmx_teleop_vr_navigation_306/session_controls.py",
+   "sha256": "490a344f026c5aa78694a4de87855e60e3949107f6ef3b46baf4e4e6566af38c",
+   "mode": "644",
+   "size": 1953
+  },
+  "openarmx_teleop_vr_navigation_306/simple_task_catalog.py": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/python3.12/site-packages/openarmx_teleop_vr_navigation_306/simple_task_catalog.py",
+   "sha256": "44157bf34691b493f2b1793c0a8ee9f787ced9352358157e91e3ad5372f640b6",
+   "mode": "644",
+   "size": 4996
+  },
+  "openarmx_teleop_vr_navigation_306/task_page.py": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/python3.12/site-packages/openarmx_teleop_vr_navigation_306/task_page.py",
+   "sha256": "d83e48fd995a95538b027c79b90389d02c7def72325aa896e7eaf37ece099f20",
+   "mode": "644",
+   "size": 33172
+  },
+  "openarmx_teleop_vr_navigation_306/task_planner.py": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/python3.12/site-packages/openarmx_teleop_vr_navigation_306/task_planner.py",
+   "sha256": "57233e0569c80cc6d958fe20b982e1318ac6a5b9844912e4643ecc8950d853f2",
+   "mode": "644",
+   "size": 10276
+  },
+  "openarmx_teleop_vr_navigation_306/task_speech_node.py": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/python3.12/site-packages/openarmx_teleop_vr_navigation_306/task_speech_node.py",
+   "sha256": "8637b758bca0ada6eb1cb6d30a211e5478f59fd62e95d27eae23414d0f17992b",
+   "mode": "644",
+   "size": 6549
+  },
+  "openarmx_teleop_vr_navigation_306/task_voice_web.py": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/python3.12/site-packages/openarmx_teleop_vr_navigation_306/task_voice_web.py",
+   "sha256": "c3f636f616f66abb45365a5faa906b00b11aabacc867c9b029ee9d8b7555270d",
+   "mode": "644",
+   "size": 20426
+  },
+  "openarmx_teleop_vr_navigation_306/task_workflow.py": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/python3.12/site-packages/openarmx_teleop_vr_navigation_306/task_workflow.py",
+   "sha256": "4112dab2cc707fdf4c0b0a89e1a2e9235ad38df68a881aee6ab533c469d38717",
+   "mode": "644",
+   "size": 13963
+  },
+  "openarmx_teleop_vr_navigation_306/teaching_ipc.py": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/python3.12/site-packages/openarmx_teleop_vr_navigation_306/teaching_ipc.py",
+   "sha256": "7914792d80504f309cb5a71f49b1257b63a7ab572083ff10e977c383fc4f1fb8",
+   "mode": "644",
+   "size": 2101
+  },
+  "openarmx_teleop_vr_navigation_306/voice_mode_router.py": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/python3.12/site-packages/openarmx_teleop_vr_navigation_306/voice_mode_router.py",
+   "sha256": "4d918cadaad0d201872d4e015a08e2ab3ba8bdda4d341fcfed12edff44c80702",
+   "mode": "644",
+   "size": 3888
+  },
+  "package.xml": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/package.xml",
+   "sha256": "c4bbe0d8f6c48abdad615ff59b42540129c121d6ba4d557f69e146547ea9e7da",
+   "mode": "644",
+   "size": 1537
+  },
+  "resource/openarmx_teleop_vr_navigation_306": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/resource/openarmx_teleop_vr_navigation_306",
+   "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+   "mode": "644",
+   "size": 1
+  },
+  "scripts/start_vr_navigation_306.sh": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/openarmx_teleop_vr_navigation_306/start_vr_navigation_306.sh",
+   "sha256": "d8a1bcb67e0350bc4756b5cdfcf794e84f63cd00146ed2f25f6bf69c1780038d",
+   "mode": "755",
+   "size": 7559
+  },
+  "scripts/vr_navigation_desktop_app.py": {
+   "source": "/home/ubuntu/migration367_20261118/install/openarmx_teleop_vr_navigation_306/lib/openarmx_teleop_vr_navigation_306/vr_navigation_desktop_app.py",
+   "sha256": "3b39776be4a4cac201305727ac5a632561a7b6acf9d4b437e1fa8cd69dce915b",
+   "mode": "755",
+   "size": 23677
+  },
+  "setup.cfg": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/setup.cfg",
+   "sha256": "6db47a838b858a930f82dbb50188998ca7618e739a36f5d5eb30ad218143d6f5",
+   "mode": "644",
+   "size": 135
+  },
+  "setup.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/setup.py",
+   "sha256": "47685428d37b033e65b25724924f23347337439d6aca753fc34883fca188dcd1",
+   "mode": "644",
+   "size": 1511
+  },
+  "test/probe_real_handoff.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/probe_real_handoff.py",
+   "sha256": "674258cf55bd72ce86cc6d2ea1c893b370748039961c18869b56d834f46058d1",
+   "mode": "755",
+   "size": 1152
+  },
+  "test/smoke_bridge_delivery.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/smoke_bridge_delivery.py",
+   "sha256": "6adc854981a70eb1644b3b9109987a5e161ebdd3dac55ec2c9ec473eb73624f9",
+   "mode": "755",
+   "size": 16573
+  },
+  "test/test_delivery_arrival.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_delivery_arrival.py",
+   "sha256": "3b3f1a9db64130aac42ab30a151a24fa193031c8546283cad3cd05fe7f310dbe",
+   "mode": "644",
+   "size": 2238
+  },
+  "test/test_delivery_arrival_keys.cjs": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_delivery_arrival_keys.cjs",
+   "sha256": "a909cf8856b2f5f3ceaa123a3a8e4401a056834ed710bee552c227bfe4d28ab3",
+   "mode": "644",
+   "size": 3239
+  },
+  "test/test_delivery_close.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_delivery_close.py",
+   "sha256": "c9872a4476e39dc8ae5be2fe345a30be70b6ecb0bc89070cd18b1f2584379e14",
+   "mode": "644",
+   "size": 4187
+  },
+  "test/test_delivery_close_keys.cjs": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_delivery_close_keys.cjs",
+   "sha256": "41a5c3c5a9ca5369355a626e951b2f68b0216fb343ef4bff70446e343ba21721",
+   "mode": "644",
+   "size": 1937
+  },
+  "test/test_delivery_handoff.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_delivery_handoff.py",
+   "sha256": "6b543ccf052e9481a4e93d4113c00ea9e5ad90d02e5d59cc4b01297f2e46959a",
+   "mode": "755",
+   "size": 20831
+  },
+  "test/test_delivery_offer.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_delivery_offer.py",
+   "sha256": "319473f9dec0607d9e0746bb5305ed15fd82886d262e7c23a4bc97298cd1486a",
+   "mode": "644",
+   "size": 6070
+  },
+  "test/test_delivery_offer_keys.cjs": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_delivery_offer_keys.cjs",
+   "sha256": "21cabbf248b8259f1b998bdf6f23401768dc52fd184d74d39057465cf1caefe2",
+   "mode": "644",
+   "size": 2224
+  },
+  "test/test_direct_tasks.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_direct_tasks.py",
+   "sha256": "ca64c69dd54270d3db42fe339be9c9299a0366d4d122a87859daa843d7916a77",
+   "mode": "644",
+   "size": 7136
+  },
+  "test/test_manual_squat_bridge.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_manual_squat_bridge.py",
+   "sha256": "3ae4e4a6a2831349bb0609ce5012d9be1cfe2ec2d25958bfd716a5da822bbe77",
+   "mode": "644",
+   "size": 3811
+  },
+  "test/test_navigation_logic.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_navigation_logic.py",
+   "sha256": "2dc9f8e5ab7b4a3aebbe970a187884fb62bcc4debc1cd0e0a317e1f40f90e16f",
+   "mode": "644",
+   "size": 34574
+  },
+  "test/test_operator_intervention.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_operator_intervention.py",
+   "sha256": "08f81ac92db5e7b500480d561f441e84118d1f2b60cf4abe525b1d7779245d6f",
+   "mode": "644",
+   "size": 8297
+  },
+  "test/test_operator_keys.cjs": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_operator_keys.cjs",
+   "sha256": "bc1dd6b61362faae040b6e8e375a3371e89d2242f4369467b5d2f0a7088a496c",
+   "mode": "644",
+   "size": 2429
+  },
+  "test/test_s3_head_profile.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_s3_head_profile.py",
+   "sha256": "a647cb7de40bb3d15749bcc56d2c6f88222eb74aa6e915f600de6470c7ad83ba",
+   "mode": "644",
+   "size": 2099
+  },
+  "test/test_shared_drive_ramp.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_shared_drive_ramp.py",
+   "sha256": "ea521be37a3249e09c30a892361ad113dd104aaf43b8bc86bbe4a1ffacda15c0",
+   "mode": "644",
+   "size": 2381
+  },
+  "test/test_simple_task_catalog.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_simple_task_catalog.py",
+   "sha256": "5c48a4be446806ee5f49278adb4b7c9b4f201fb35fff540ba59d1ddae0bc213b",
+   "mode": "644",
+   "size": 6150
+  },
+  "test/test_squat_menu.cjs": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_squat_menu.cjs",
+   "sha256": "5f516a3f5ca07c50a1a5c874eb08104135760be6f9536cc28ae4ccd706f492ad",
+   "mode": "644",
+   "size": 3167
+  },
+  "test/test_task_head_handoff.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_task_head_handoff.py",
+   "sha256": "6d62aad2b6fcd39f9f679f3e6bd1476c268f4662e168b3e5ede79b6a4571bef1",
+   "mode": "644",
+   "size": 4397
+  },
+  "test/test_task_head_pause.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_task_head_pause.py",
+   "sha256": "75de2d4330ec32de9ffdff823707bab377b1a10c85c7af79df6bfdb4b12dd127",
+   "mode": "644",
+   "size": 8444
+  },
+  "test/test_task_head_pose.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_task_head_pose.py",
+   "sha256": "0631125db47ec026175525325eb12fe25ebe302d39a9e67e412370a17d52efaa",
+   "mode": "644",
+   "size": 9602
+  },
+  "test/test_task_head_s3_direction.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_task_head_s3_direction.py",
+   "sha256": "f3c2214eb7eb866f47798d1e4af2dc498f4a99ea3924b175af43d5374096b3e8",
+   "mode": "644",
+   "size": 2081
+  },
+  "test/test_task_height_feedback.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_task_height_feedback.py",
+   "sha256": "9e47068cc07d33d976bf803f8fe09d723691606fbe46b227b1bce1961489eaa2",
+   "mode": "644",
+   "size": 7632
+  },
+  "test/test_task_live_refresh_session.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_task_live_refresh_session.py",
+   "sha256": "4d97a497c96e5409f132e24c85be5a7198576269030d55be7d255f9ea56acb96",
+   "mode": "644",
+   "size": 9215
+  },
+  "test/test_task_pose_retry.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_task_pose_retry.py",
+   "sha256": "14a7bb39231ce146246072a1467d3e3baa1fef02f4ea92d615505be76ca49400",
+   "mode": "644",
+   "size": 6141
+  },
+  "test/test_task_pose_retry_keys.cjs": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_task_pose_retry_keys.cjs",
+   "sha256": "14c6efa1cf03d145c74ed6bd033f0a6dcc72e5c2e51ff503ef9dcc297a121687",
+   "mode": "644",
+   "size": 2021
+  },
+  "test/test_task_pose_retry_menu.cjs": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_task_pose_retry_menu.cjs",
+   "sha256": "117d07aa746bde7ce87a29faeb0f97079e675e7519cda023b541d1de93c81b0a",
+   "mode": "644",
+   "size": 3393
+  },
+  "test/test_task_workflow.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_task_workflow.py",
+   "sha256": "edf06bf58dcaeb5f560368d44866e3c43d9e0aff83249c7e06abb27e3ec7fd24",
+   "mode": "644",
+   "size": 6061
+  },
+  "test/test_teaching_api.py": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_teaching_api.py",
+   "sha256": "7172679e3ff8a6bd705b6cfce20467f00f32594b31138e832879e7088e17fef9",
+   "mode": "644",
+   "size": 2255
+  },
+  "test/test_v5_viewer.cjs": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_v5_viewer.cjs",
+   "sha256": "99406bdb73f654d1b5e60a1b7ef5785f807176feee627d7cc984dcd0edf370b4",
+   "mode": "644",
+   "size": 1730
+  },
+  "test/test_yb_chord.cjs": {
+   "source": "/home/ubuntu/migration367_20261118/sources/openarmx_teleop_vr_navigation_306/test/test_yb_chord.cjs",
+   "sha256": "5b335fab275378bf9c8f46780b634c518e10cdc192b07db1081392cc5a2bf711",
+   "mode": "644",
+   "size": 1508
+  },
+  "web/audience.css": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/audience.css",
+   "sha256": "801c3b8b4b4c078d1a9054c46c0f75b632908d6abd7000ac7b63f58b201ded9e",
+   "mode": "644",
+   "size": 13270
+  },
+  "web/audience.html": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/audience.html",
+   "sha256": "04dda94a81f1150cb38b5fced49fa16ff26ad2f29a95acbd9c9b3c1a9bb09372",
+   "mode": "644",
+   "size": 4104
+  },
+  "web/audience.js": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/audience.js",
+   "sha256": "f8972aa5d3209e9c87ca62ea98764893e89857dc3f876ef7bc79a795b490b398",
+   "mode": "644",
+   "size": 12695
+  },
+  "web/drive_worker.js": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/drive_worker.js",
+   "sha256": "bf3d92f71638cf1f01c22a8fe62c60fda21f6590fa68815417f9e824b110a211",
+   "mode": "644",
+   "size": 3097
+  },
+  "web/fisheye360_defaults.json": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/fisheye360_defaults.json",
+   "sha256": "86af9b3b5c7ddcfd889d28c428c94f8afc271358858d71458435ac8a4a32ec2a",
+   "mode": "644",
+   "size": 830
+  },
+  "web/fisheye_pip.js": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/fisheye_pip.js",
+   "sha256": "fa7712f393095e80393d7128db3fcef6bed510d269d2402ef59f843f3b6d232a",
+   "mode": "644",
+   "size": 10997
+  },
+  "web/index.html": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/index.html",
+   "sha256": "0145c33700bd5f06a016812029ff078ddf942b7208b5dd88eea274f61ed3ea8b",
+   "mode": "644",
+   "size": 5243
+  },
+  "web/jpeg_stream.js": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/jpeg_stream.js",
+   "sha256": "da2a9aa6829576fb04a744a1866f3d5584ff6ed3142a967a21747663622a18bf",
+   "mode": "644",
+   "size": 3554
+  },
+  "web/monitor.css": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/monitor.css",
+   "sha256": "f83a15779d66741a86c1e1fca9824ed293de1cd4052737358f0da5f77e258190",
+   "mode": "644",
+   "size": 618
+  },
+  "web/monitor.html": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/monitor.html",
+   "sha256": "ef6ab5ec02e55945dbd247bd3b892b8658798c62201c99ebfc0cf75d0484227e",
+   "mode": "644",
+   "size": 435
+  },
+  "web/monitor.js": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/monitor.js",
+   "sha256": "75d91985868314465a8900df4fdb256096d6711861862d6ec0f23201a0eed9e0",
+   "mode": "644",
+   "size": 22523
+  },
+  "web/nav_app.js": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/nav_app.js",
+   "sha256": "0e0d48d7eb9e3e8dbd151d6eafb5f572921a1401345e995a0194353040412e08",
+   "mode": "644",
+   "size": 145993
+  },
+  "web/nav_styles.css": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/nav_styles.css",
+   "sha256": "37dd0bc2f0327deb86784329b4b87e29da666a11c3ea62f31e149fab341973df",
+   "mode": "644",
+   "size": 275
+  },
+  "web/projection.js": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/projection.js",
+   "sha256": "197e9484df9af3925c6dbf4268dac24c608c95b57af932714f6068680583b497",
+   "mode": "644",
+   "size": 5169
+  },
+  "web/projection_renderer.js": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/projection_renderer.js",
+   "sha256": "bb46c1851766d9840851d4e28fda0ec23729755573f0e75263571a2584902ce1",
+   "mode": "644",
+   "size": 4197
+  },
+  "web/robot-overhead.webp": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/robot-overhead.webp",
+   "sha256": "2cd87b5ccf1b15cf18bf158bc0548951ee151b5bc7494f0296e43321eae3b0b3",
+   "mode": "644",
+   "size": 47118
+  },
+  "web/squat_mode.js": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/squat_mode.js",
+   "sha256": "20e35c2aae6636ce66c0b504264fffa13dbc74b737aa95263a620fe0964adef0",
+   "mode": "644",
+   "size": 6776
+  },
+  "web/surround_robot.js": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/surround_robot.js",
+   "sha256": "42e4b1dee4e2cd6d55ff053ac781deb71a8f984284148b40237c175f54c00e40",
+   "mode": "644",
+   "size": 176
+  },
+  "web/teaching_input.js": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/teaching_input.js",
+   "sha256": "2eb5c1472778c7d5ab9fc4b51fec886bc6a16f68e166ed1f9f57bee92841fe2e",
+   "mode": "644",
+   "size": 2385
+  },
+  "web/teaching_vr.js": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/teaching_vr.js",
+   "sha256": "630dfed478893db9009ad87dd0be1423488ba861237427c5ca1caa47faf5c948",
+   "mode": "644",
+   "size": 7774
+  },
+  "web/vr_app.js": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/vr_app.js",
+   "sha256": "c7a0cd72ad09add4010f873ff77e9ea5f149ca779f91458b1b7d5430bcb022e0",
+   "mode": "644",
+   "size": 102696
+  },
+  "web/vr_custom_controls.js": {
+   "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web/vr_custom_controls.js",
+   "sha256": "c1180e5820062d6b6bfeaec85c69017af266c57ad1aa001332a74ec73e806f67",
+   "mode": "644",
+   "size": 12864
+  }
+ }
+}
