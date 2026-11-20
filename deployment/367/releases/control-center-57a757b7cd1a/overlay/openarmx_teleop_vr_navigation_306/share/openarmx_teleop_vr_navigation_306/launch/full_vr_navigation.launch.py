@@ -1,0 +1,1 @@
+/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/entries/openarmx_teleop_vr_navigation_306/launch/full_vr_navigation.launch.py

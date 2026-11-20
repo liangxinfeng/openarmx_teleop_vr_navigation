@@ -11,3 +11,5 @@ VR 导航启动 367 的 V5 手臂遥操、导航桥和 2D 导航栈。生效的�
 - [liangxinfeng/control_center_slam](https://github.com/liangxinfeng/control_center_slam/tree/367)
 - [liangxinfeng/openarmx_teleop_vr](https://github.com/liangxinfeng/openarmx_teleop_vr/tree/367)
 - [liangxinfeng/openarmx_teleop_vr_navigation](https://github.com/liangxinfeng/openarmx_teleop_vr_navigation/tree/367)
+
+原机 ROS 索引和启动入口的附加清单见 SOURCE_367_OVERLAY.json。符号链接按原机 Linux 目标保存，其中 SHA-256 校验链接目标文本。五个仓库的 deployment/367 按路径合并后对应同一套发布布局。

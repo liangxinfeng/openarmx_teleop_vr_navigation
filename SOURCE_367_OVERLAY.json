@@ -1,0 +1,87 @@
+{
+ "deployment/367/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/lib": {
+  "mode": "120000",
+  "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/lib",
+  "sha256": "4d0f0392e6bdb207cef1220ba1b9a521a17183b92593f1797b7ec3385dee65d1"
+ },
+ "deployment/367/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/config": {
+  "mode": "120000",
+  "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/config",
+  "sha256": "00a3063e83f6be47b41efd2f2d5b0e5f04e06eae022888452a493316f1970327"
+ },
+ "deployment/367/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web": {
+  "mode": "120000",
+  "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/web",
+  "sha256": "494c862b5d89bf3cd7334a0c591e5d7da817ad5c3d8c3f711e9aa9f3f4286ee2"
+ },
+ "deployment/367/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/README.md": {
+  "mode": "120000",
+  "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/README.md",
+  "sha256": "7a9916060f43a52c423bd9b0ebd2db50ad50fdcde8fbc8544f00a8c2ca770019"
+ },
+ "deployment/367/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/package.bash": {
+  "mode": "120000",
+  "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/package.bash",
+  "sha256": "0be146b5176712f8803fd0f85559d68eaf8ffcb5642927d40415a6ba53889050"
+ },
+ "deployment/367/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/package.zsh": {
+  "mode": "120000",
+  "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/package.zsh",
+  "sha256": "4fb1c0ae95a94d02fe443c43dc87ff5a9097a0feb4d890b98d91ee0706d717f5"
+ },
+ "deployment/367/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/package.dsv": {
+  "mode": "120000",
+  "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/package.dsv",
+  "sha256": "c3ca9afc3bab9028c5f596007a243367cf7f08115605f5ccf9980fd121176733"
+ },
+ "deployment/367/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/hook": {
+  "mode": "120000",
+  "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/hook",
+  "sha256": "628820c2585888304e8945249e79ccc323243cc7ad21873b6300660541aa9452"
+ },
+ "deployment/367/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/package.ps1": {
+  "mode": "120000",
+  "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/package.ps1",
+  "sha256": "a804718de9711cd20730ed9d97a4c5baedf341cd18c2939b39403dc131a93122"
+ },
+ "deployment/367/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/package.xml": {
+  "mode": "120000",
+  "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/package.xml",
+  "sha256": "12411ed151b540ca04e6da9b1b8b6d906d3d9148dd7d29d1490d16e9d4d29d12"
+ },
+ "deployment/367/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/package.sh": {
+  "mode": "120000",
+  "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/package.sh",
+  "sha256": "9081eb47dac8973ebd8fc21bd5b78232e0a94dd1ca4c8984db4b9cfd564c51ce"
+ },
+ "deployment/367/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/ament_index/resource_index/packages/openarmx_teleop_vr_navigation_306": {
+  "mode": "100644",
+  "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/ament_index/resource_index/packages/openarmx_teleop_vr_navigation_306",
+  "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+ },
+ "deployment/367/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/launch/full_vr_navigation.launch.py": {
+  "mode": "120000",
+  "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/overlay/openarmx_teleop_vr_navigation_306/share/openarmx_teleop_vr_navigation_306/launch/full_vr_navigation.launch.py",
+  "sha256": "9bf6f3bc60a013f07106b88712f3c01250c0596e17d51dff59adf5bc8f9329c8"
+ },
+ "deployment/367/releases/control-center-57a757b7cd1a/entries/vr_navigation_stack": {
+  "mode": "100644",
+  "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/entries/vr_navigation_stack",
+  "sha256": "fe39a6bb879250ead89a1e52efea762f48eccd6f324c0a672aac4351fa4b6c5d"
+ },
+ "deployment/367/releases/control-center-57a757b7cd1a/entries/vr_navigation": {
+  "mode": "100644",
+  "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/entries/vr_navigation",
+  "sha256": "deccff950380318c09552ec086fd5d4c713538b963873e99f5c8bfdef522d59b"
+ },
+ "deployment/367/releases/control-center-57a757b7cd1a/src": {
+  "mode": "120000",
+  "source": "/home/ubuntu/migration367_20261118/releases/control-center-57a757b7cd1a/src",
+  "sha256": "e917532416d9794732bcae20f2c3c71bd5802a2cffce6967dde9000a7e158f04"
+ },
+ "deployment/367/releases/control-center-current": {
+  "mode": "120000",
+  "source": "/home/ubuntu/migration367_20261118/releases/control-center-current",
+  "sha256": "8f0627e87362ceb8a6ea200f7e3fb3f94ba06e2cecfcdc6a9f3ec989c872165f"
+ }
+}
